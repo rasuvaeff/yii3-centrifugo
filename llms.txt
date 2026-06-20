@@ -1,0 +1,141 @@
+# yii3-centrifugo
+
+Centrifugo v6 integration for Yii3.
+
+## Install
+
+```bash
+composer require rasuvaeff/yii3-centrifugo
+```
+
+## Rules
+
+- Targets Centrifugo **v6** only. Wire format changed between majors — do not assume v3/v4/v5 compatibility.
+- All proxy responses must be HTTP 200 with JSON `{"result":{}}`, `{"error":{"code":N,"message":"..."}}` (400–1999), or `{"disconnect":{"code":N,"reason":"..."}}` (4000–4999).
+- Handler interfaces are **NOT** bound in package `config/di.php` — the application must bind them.
+- API key and HMAC secret come from `params['centrifugo']` — never hard-coded.
+- PSR-18 HTTP client and PSR-17 factories must be bound by the application.
+
+## API Reference
+
+### CentrifugoClient
+
+```php
+$client = $container->get(CentrifugoClient::class);
+
+$client->publish(channel: 'ch', data: ['x' => 1]);
+$client->broadcast(channels: ['a', 'b'], data: ['x' => 1]);
+$client->subscribe(user: '42', channel: 'private#42');
+$client->unsubscribe(user: '42', channel: 'private#42');
+$client->disconnect(user: '42');
+$client->refresh(user: '42', expireAt: time() + 3600);
+$client->presence(channel: 'ch');          // → array with presence map
+$client->presenceStats(channel: 'ch');     // → array with num_clients, num_users
+$client->history(channel: 'ch', limit: 100, reverse: false);
+$client->historyRemove(channel: 'ch');
+$client->channels(pattern: 'news*');
+$client->info();
+$client->batch(
+    new BatchCommand(method: 'publish', params: ['channel' => 'ch', 'data' => []]),
+);
+// Throws CentrifugoApiException on Centrifugo error response.
+```
+
+### Token Issuers
+
+```php
+// Connection JWT (sub, exp, optional: channels, info, meta)
+$jwt = $container->get(ConnectionTokenIssuer::class)->issue(
+    userId: '42',
+    ttl: 3600,
+    channels: ['news'],
+    info: ['name' => 'Alice'],
+);
+
+// Subscription JWT (sub, channel, exp, optional: info)
+$jwt = $container->get(SubscriptionTokenIssuer::class)->issue(
+    userId: '42',
+    channel: 'private#42',
+    ttl: 3600,
+);
+```
+
+### Proxy Actions (PSR-15 RequestHandlerInterface)
+
+Register as routes in Yii3 router. Centrifugo calls these endpoints via HTTP POST.
+
+```
+ConnectAction    → POST /centrifugo/connect
+RefreshAction    → POST /centrifugo/refresh
+SubscribeAction  → POST /centrifugo/subscribe
+PublishAction    → POST /centrifugo/publish
+SubRefreshAction → POST /centrifugo/sub_refresh
+RpcAction        → POST /centrifugo/rpc
+```
+
+### Proxy Handler Interfaces (implement in app)
+
+```php
+interface ConnectProxyHandler {
+    public function handle(ConnectRequest $request): ProxyResult|ProxyError|ProxyDisconnect;
+}
+// ConnectRequest fields: client, transport, protocol, encoding, data?, name?, version?, channels[]
+
+interface SubscribeProxyHandler {
+    public function handle(SubscribeRequest $request): ProxyResult|ProxyError|ProxyDisconnect;
+}
+// SubscribeRequest fields: client, transport, protocol, encoding, user, channel, data?
+
+interface PublishProxyHandler {
+    public function handle(PublishRequest $request): ProxyResult|ProxyError|ProxyDisconnect;
+}
+// PublishRequest fields: client, transport, protocol, encoding, user, channel, data?
+
+interface RefreshProxyHandler {
+    public function handle(RefreshRequest $request): ProxyResult|ProxyError|ProxyDisconnect;
+}
+// RefreshRequest fields: client, transport, protocol, encoding, user
+
+interface SubRefreshProxyHandler {
+    public function handle(SubRefreshRequest $request): ProxyResult|ProxyError|ProxyDisconnect;
+}
+// SubRefreshRequest fields: client, transport, protocol, encoding, user, channel
+
+interface RpcProxyHandler {
+    public function handle(RpcRequest $request): ProxyResult|ProxyError|ProxyDisconnect;
+}
+// RpcRequest fields: client, transport, protocol, encoding, user, method, data?
+```
+
+### Proxy Response Types
+
+```php
+new ProxyResult(data: ['user' => '42', 'channels' => ['news']]);
+new ProxyError(code: 403, message: 'permission denied');   // code: 400–1999
+new ProxyDisconnect(code: 4001, reason: 'unauthorized');   // code: 4000–4999
+```
+
+### DI Configuration (app)
+
+```php
+// config/common/di/centrifugo.php
+use Rasuvaeff\Yii3Centrifugo\Proxy\Handler\ConnectProxyHandler;
+use Rasuvaeff\Yii3Centrifugo\Proxy\Handler\SubscribeProxyHandler;
+
+return [
+    ConnectProxyHandler::class => AppConnectHandler::class,
+    SubscribeProxyHandler::class => AppSubscribeHandler::class,
+];
+```
+
+### Params
+
+```php
+// config/params.php
+'centrifugo' => [
+    'api_url'           => 'http://centrifugo:8000',
+    'api_key'           => 'secret',
+    'token_hmac_secret' => 'at-least-32-chars',
+    'token_ttl'         => 3600,
+],
+```
