@@ -21,6 +21,21 @@ use Testo\Test;
 #[CoversNothing]
 final class ConfigWiringTest
 {
+    /**
+     * config/di.php reads the $params yiisoft/config puts in its scope, so it
+     * must be required with $params defined — requiring it bare emits
+     * "Undefined variable $params" and yields definitions built from nothing.
+     *
+     * @return array<string, mixed>
+     */
+    public static function requireDi(): array
+    {
+        $params = require __DIR__ . '/../config/params.php';
+
+        /** @var array<string, mixed> */
+        return require __DIR__ . '/../config/di.php';
+    }
+
     public function clientCanBeInstantiatedFromParams(): void
     {
         $factory = new Psr17Factory();
@@ -79,7 +94,7 @@ final class ConfigWiringTest
 
     public function diKeysDoNotOverlapHandlerInterfaces(): void
     {
-        $di = require __DIR__ . '/../config/di.php';
+        $di = self::requireDi();
         $handlerInterfaces = [
             \Rasuvaeff\Yii3Centrifugo\Proxy\Handler\ConnectProxyHandler::class,
             \Rasuvaeff\Yii3Centrifugo\Proxy\Handler\RefreshProxyHandler::class,
