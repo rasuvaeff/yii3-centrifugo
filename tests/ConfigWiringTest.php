@@ -93,4 +93,34 @@ final class ConfigWiringTest
             Assert::array($di)->doesNotHaveKeys($interface);
         }
     }
+
+    /**
+     * yiisoft/config resolves every config-plugin path relative to
+     * config-plugin-options.source-directory. Repeating that directory inside
+     * the path itself resolves to config/config/*.php, which does not exist,
+     * and yiisoft/config throws while building the merge plan — taking the
+     * whole consuming application down on install.
+     */
+    public function declaredConfigPluginPathsExistOnDisk(): void
+    {
+        $root = dirname(__DIR__);
+        /** @var array{extra: array{config-plugin: array<string, string>, config-plugin-options?: array{source-directory?: string}}} $composer */
+        $composer = json_decode(
+            (string) file_get_contents($root . '/composer.json'),
+            associative: true,
+            flags: JSON_THROW_ON_ERROR,
+        );
+
+        $sourceDirectory = $composer['extra']['config-plugin-options']['source-directory'] ?? '';
+
+        foreach ($composer['extra']['config-plugin'] as $group => $path) {
+            $resolved = $root . '/' . ltrim($sourceDirectory . '/', '/') . $path;
+
+            Assert::same(
+                is_file($resolved),
+                expected: true,
+                message: sprintf('config-plugin group "%s" points at a missing file: %s', $group, $resolved),
+            );
+        }
+    }
 }

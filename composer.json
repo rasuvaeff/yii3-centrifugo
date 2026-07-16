@@ -68,8 +68,8 @@
     },
     "extra": {
         "config-plugin": {
-            "di": "config/di.php",
-            "params": "config/params.php"
+            "di": "di.php",
+            "params": "params.php"
         },
         "config-plugin-options": {
             "source-directory": "config"
