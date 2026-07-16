@@ -31,7 +31,6 @@ return [
         ClientInterface $httpClient,
         RequestFactoryInterface $requestFactory,
         StreamFactoryInterface $streamFactory,
-        array $params,
     ): CentrifugoClient => new CentrifugoClient(
         httpClient: $httpClient,
         requestFactory: $requestFactory,
@@ -40,7 +39,7 @@ return [
         apiKey: $params['centrifugo']['api_key'],
     ),
 
-    ConnectionTokenIssuer::class => static function (array $params): ConnectionTokenIssuer {
+    ConnectionTokenIssuer::class => static function () use ($params): ConnectionTokenIssuer {
         $jwtConfig = Configuration::forSymmetricSigner(
             new Sha256(),
             InMemory::plainText($params['centrifugo']['token_hmac_secret']),
@@ -52,7 +51,7 @@ return [
         );
     },
 
-    SubscriptionTokenIssuer::class => static function (array $params): SubscriptionTokenIssuer {
+    SubscriptionTokenIssuer::class => static function () use ($params): SubscriptionTokenIssuer {
         $jwtConfig = Configuration::forSymmetricSigner(
             new Sha256(),
             InMemory::plainText($params['centrifugo']['token_hmac_secret']),
