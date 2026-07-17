@@ -6,6 +6,7 @@
 [![Static analysis](https://github.com/rasuvaeff/yii3-centrifugo/actions/workflows/static-analysis.yml/badge.svg)](https://github.com/rasuvaeff/yii3-centrifugo/actions/workflows/static-analysis.yml)
 [![Psalm Level](https://shepherd.dev/github/rasuvaeff/yii3-centrifugo/level.svg)](https://shepherd.dev/github/rasuvaeff/yii3-centrifugo)
 [![License](https://poser.pugx.org/rasuvaeff/yii3-centrifugo/license)](https://packagist.org/packages/rasuvaeff/yii3-centrifugo)
+[Русская версия](README.ru.md)
 
 Centrifugo v6 integration for Yii3: full HTTP server API client, JWT connection/subscription token issuers, and PSR-15 proxy event handlers (connect, subscribe, publish, refresh, sub_refresh, rpc).
 
