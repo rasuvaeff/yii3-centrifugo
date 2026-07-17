@@ -38,7 +38,8 @@
         "roave/backward-compatibility-check": "^8.0",
         "testo/bridge-infection": "^0.1.6",
         "testo/testo": "^0.10.25",
-        "vimeo/psalm": "^6.16"
+        "vimeo/psalm": "^6.16",
+        "yiisoft/di": "^1.4"
     },
     "suggest": {
         "centrifugal/phpcent": "Official low-level Centrifugo HTTP API client (alternative to the bundled PSR-18 client)",
@@ -68,8 +69,8 @@
     },
     "extra": {
         "config-plugin": {
-            "di": "config/di.php",
-            "params": "config/params.php"
+            "di": "di.php",
+            "params": "params.php"
         },
         "config-plugin-options": {
             "source-directory": "config"

@@ -21,6 +21,21 @@ use Testo\Test;
 #[CoversNothing]
 final class ConfigWiringTest
 {
+    /**
+     * config/di.php reads the $params yiisoft/config puts in its scope, so it
+     * must be required with $params defined — requiring it bare emits
+     * "Undefined variable $params" and yields definitions built from nothing.
+     *
+     * @return array<string, mixed>
+     */
+    public static function requireDi(): array
+    {
+        $params = require __DIR__ . '/../config/params.php';
+
+        /** @var array<string, mixed> */
+        return require __DIR__ . '/../config/di.php';
+    }
+
     public function clientCanBeInstantiatedFromParams(): void
     {
         $factory = new Psr17Factory();
@@ -79,7 +94,7 @@ final class ConfigWiringTest
 
     public function diKeysDoNotOverlapHandlerInterfaces(): void
     {
-        $di = require __DIR__ . '/../config/di.php';
+        $di = self::requireDi();
         $handlerInterfaces = [
             \Rasuvaeff\Yii3Centrifugo\Proxy\Handler\ConnectProxyHandler::class,
             \Rasuvaeff\Yii3Centrifugo\Proxy\Handler\RefreshProxyHandler::class,
@@ -91,6 +106,36 @@ final class ConfigWiringTest
 
         foreach ($handlerInterfaces as $interface) {
             Assert::array($di)->doesNotHaveKeys($interface);
+        }
+    }
+
+    /**
+     * yiisoft/config resolves every config-plugin path relative to
+     * config-plugin-options.source-directory. Repeating that directory inside
+     * the path itself resolves to config/config/*.php, which does not exist,
+     * and yiisoft/config throws while building the merge plan — taking the
+     * whole consuming application down on install.
+     */
+    public function declaredConfigPluginPathsExistOnDisk(): void
+    {
+        $root = dirname(__DIR__);
+        /** @var array{extra: array{config-plugin: array<string, string>, config-plugin-options?: array{source-directory?: string}}} $composer */
+        $composer = json_decode(
+            (string) file_get_contents($root . '/composer.json'),
+            associative: true,
+            flags: JSON_THROW_ON_ERROR,
+        );
+
+        $sourceDirectory = $composer['extra']['config-plugin-options']['source-directory'] ?? '';
+
+        foreach ($composer['extra']['config-plugin'] as $group => $path) {
+            $resolved = $root . '/' . ltrim($sourceDirectory . '/', '/') . $path;
+
+            Assert::same(
+                is_file($resolved),
+                expected: true,
+                message: sprintf('config-plugin group "%s" points at a missing file: %s', $group, $resolved),
+            );
         }
     }
 }
