@@ -9,8 +9,14 @@ use Lcobucci\JWT\Signer\Hmac\Sha256;
 use Lcobucci\JWT\Signer\Key\InMemory;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use Psr\Http\Client\ClientInterface;
-use Psr\Http\Message\RequestInterface;
+use Rasuvaeff\Understudy\Understudy;
 use Rasuvaeff\Yii3Centrifugo\CentrifugoClient;
+use Rasuvaeff\Yii3Centrifugo\Proxy\Handler\ConnectProxyHandler;
+use Rasuvaeff\Yii3Centrifugo\Proxy\Handler\PublishProxyHandler;
+use Rasuvaeff\Yii3Centrifugo\Proxy\Handler\RefreshProxyHandler;
+use Rasuvaeff\Yii3Centrifugo\Proxy\Handler\RpcProxyHandler;
+use Rasuvaeff\Yii3Centrifugo\Proxy\Handler\SubRefreshProxyHandler;
+use Rasuvaeff\Yii3Centrifugo\Proxy\Handler\SubscribeProxyHandler;
 use Rasuvaeff\Yii3Centrifugo\Token\ConnectionTokenIssuer;
 use Rasuvaeff\Yii3Centrifugo\Token\SubscriptionTokenIssuer;
 use Testo\Assert;
@@ -32,20 +38,16 @@ final class ConfigWiringTest
     {
         $params = require __DIR__ . '/../config/params.php';
 
-        /** @var array<string, mixed> */
         return require __DIR__ . '/../config/di.php';
     }
 
     public function clientCanBeInstantiatedFromParams(): void
     {
         $factory = new Psr17Factory();
-        $httpClient = new class implements ClientInterface {
-            #[\Override]
-            public function sendRequest(RequestInterface $request): \Psr\Http\Message\ResponseInterface
-            {
-                throw new \LogicException('Not called in this test');
-            }
-        };
+        // Instantiation only: a strict double refuses any HTTP call this test
+        // should never make.
+        $httpClient = Understudy::for(ClientInterface::class);
+        Understudy::strict($httpClient);
 
         $params = require __DIR__ . '/../config/params.php';
 
@@ -96,12 +98,12 @@ final class ConfigWiringTest
     {
         $di = self::requireDi();
         $handlerInterfaces = [
-            \Rasuvaeff\Yii3Centrifugo\Proxy\Handler\ConnectProxyHandler::class,
-            \Rasuvaeff\Yii3Centrifugo\Proxy\Handler\RefreshProxyHandler::class,
-            \Rasuvaeff\Yii3Centrifugo\Proxy\Handler\SubscribeProxyHandler::class,
-            \Rasuvaeff\Yii3Centrifugo\Proxy\Handler\PublishProxyHandler::class,
-            \Rasuvaeff\Yii3Centrifugo\Proxy\Handler\SubRefreshProxyHandler::class,
-            \Rasuvaeff\Yii3Centrifugo\Proxy\Handler\RpcProxyHandler::class,
+            ConnectProxyHandler::class,
+            RefreshProxyHandler::class,
+            SubscribeProxyHandler::class,
+            PublishProxyHandler::class,
+            SubRefreshProxyHandler::class,
+            RpcProxyHandler::class,
         ];
 
         foreach ($handlerInterfaces as $interface) {

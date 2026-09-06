@@ -6,17 +6,19 @@ namespace Rasuvaeff\Yii3Centrifugo\Tests\Proxy\Action;
 
 use Nyholm\Psr7\Factory\Psr17Factory;
 use Nyholm\Psr7\ServerRequest;
+use Rasuvaeff\Understudy\Arg;
+use Rasuvaeff\Understudy\Understudy;
 use Rasuvaeff\Yii3Centrifugo\Proxy\Action\PublishAction;
 use Rasuvaeff\Yii3Centrifugo\Proxy\Handler\PublishProxyHandler;
 use Rasuvaeff\Yii3Centrifugo\Proxy\Internal\ProxyResponseFactory;
 use Rasuvaeff\Yii3Centrifugo\Proxy\Request\PublishRequest;
-use Rasuvaeff\Yii3Centrifugo\Proxy\Response\ProxyDisconnect;
-use Rasuvaeff\Yii3Centrifugo\Proxy\Response\ProxyError;
 use Rasuvaeff\Yii3Centrifugo\Proxy\Response\ProxyResult;
 use Testo\Assert;
 use Testo\Codecov\Covers;
 use Testo\Lifecycle\BeforeTest;
 use Testo\Test;
+
+use function Rasuvaeff\Understudy\when;
 
 #[Test]
 #[Covers(PublishAction::class)]
@@ -33,18 +35,9 @@ final class PublishActionTest
 
     public function parsesChannelUserAndData(): void
     {
-        $box = new \stdClass();
-        $handler = new class ($box) implements PublishProxyHandler {
-            public function __construct(private readonly \stdClass $box) {}
-
-            #[\Override]
-            public function handle(PublishRequest $request): ProxyResult|ProxyError|ProxyDisconnect
-            {
-                $this->box->request = $request;
-
-                return new ProxyResult();
-            }
-        };
+        $requests = Arg::captor(PublishRequest::class);
+        $handler = Understudy::for(PublishProxyHandler::class);
+        when(fn() => $handler->handle($requests->capture()))->returns(new ProxyResult());
 
         $rf = new ProxyResponseFactory($this->factory, $this->factory);
         $action = new PublishAction(handler: $handler, responseFactory: $rf);
@@ -58,9 +51,10 @@ final class PublishActionTest
             'data' => ['text' => 'hello'],
         ]));
 
-        Assert::same($box->request->user, '7');
-        Assert::same($box->request->channel, 'chat');
-        Assert::same($box->request->data, ['text' => 'hello']);
+        $request = $requests->last();
+        Assert::same($request->user, '7');
+        Assert::same($request->channel, 'chat');
+        Assert::same($request->data, ['text' => 'hello']);
     }
 
     private function makeRequest(array $body): \Psr\Http\Message\ServerRequestInterface

@@ -8,6 +8,9 @@ use Nyholm\Psr7\Factory\Psr17Factory;
 use Nyholm\Psr7\Response;
 use Psr\Http\Client\ClientInterface;
 use Psr\Http\Message\RequestInterface;
+use Rasuvaeff\Understudy\Arg;
+use Rasuvaeff\Understudy\Captor;
+use Rasuvaeff\Understudy\Understudy;
 use Rasuvaeff\Yii3Centrifugo\BatchCommand;
 use Rasuvaeff\Yii3Centrifugo\CentrifugoApiException;
 use Rasuvaeff\Yii3Centrifugo\CentrifugoClient;
@@ -16,6 +19,8 @@ use Testo\Codecov\Covers;
 use Testo\Lifecycle\BeforeTest;
 use Testo\Test;
 
+use function Rasuvaeff\Understudy\when;
+
 #[Test]
 #[Covers(CentrifugoClient::class)]
 #[Covers(CentrifugoApiException::class)]
@@ -23,7 +28,9 @@ use Testo\Test;
 final class CentrifugoClientTest
 {
     private Psr17Factory $factory;
-    public ?RequestInterface $lastRequest = null;
+
+    /** @var Captor<RequestInterface> */
+    private Captor $requests;
 
     #[BeforeTest]
     public function setUp(): void
@@ -37,8 +44,8 @@ final class CentrifugoClientTest
 
         $client->publish(channel: 'news', data: ['title' => 'Hello']);
 
-        $body = json_decode((string) $this->lastRequest?->getBody(), true);
-        Assert::same($this->lastRequest?->getUri()->getPath(), '/api/publish');
+        $body = json_decode((string) $this->requests->last()->getBody(), true);
+        Assert::same($this->requests->last()->getUri()->getPath(), '/api/publish');
         Assert::same($body['channel'], 'news');
         Assert::same($body['data'], ['title' => 'Hello']);
     }
@@ -48,9 +55,9 @@ final class CentrifugoClientTest
         $client = $this->makeClient(['result' => []]);
         $client->broadcast(channels: ['a', 'b'], data: ['x' => 1]);
 
-        $body = json_decode((string) $this->lastRequest?->getBody(), true);
+        $body = json_decode((string) $this->requests->last()->getBody(), true);
         Assert::same($body['channels'], ['a', 'b']);
-        Assert::same($this->lastRequest?->getUri()->getPath(), '/api/broadcast');
+        Assert::same($this->requests->last()->getUri()->getPath(), '/api/broadcast');
     }
 
     public function presenceReturnsResult(): void
@@ -68,7 +75,7 @@ final class CentrifugoClientTest
         $client = $this->makeClient(['result' => []]);
         $client->history(channel: 'news', limit: 10, reverse: true);
 
-        $body = json_decode((string) $this->lastRequest?->getBody(), true);
+        $body = json_decode((string) $this->requests->last()->getBody(), true);
         Assert::same($body['limit'], 10);
         Assert::true($body['reverse']);
     }
@@ -78,7 +85,7 @@ final class CentrifugoClientTest
         $client = $this->makeClient(['result' => []]);
         $client->channels(pattern: 'news*');
 
-        $body = json_decode((string) $this->lastRequest?->getBody(), true);
+        $body = json_decode((string) $this->requests->last()->getBody(), true);
         Assert::same($body['pattern'], 'news*');
     }
 
@@ -90,8 +97,8 @@ final class CentrifugoClientTest
             new BatchCommand(method: 'publish', params: ['channel' => 'b', 'data' => []]),
         );
 
-        $body = json_decode((string) $this->lastRequest?->getBody(), true);
-        Assert::same($this->lastRequest?->getUri()->getPath(), '/api/batch');
+        $body = json_decode((string) $this->requests->last()->getBody(), true);
+        Assert::same($this->requests->last()->getUri()->getPath(), '/api/batch');
         Assert::count($body['commands'], 2);
         Assert::array($body['commands'][0])->hasKeys('publish');
     }
@@ -125,7 +132,7 @@ final class CentrifugoClientTest
         $client = $this->makeClient(['result' => []], apiKey: 'secret-key');
         $client->info();
 
-        Assert::same($this->lastRequest?->getHeaderLine('X-API-Key'), 'secret-key');
+        Assert::same($this->requests->last()->getHeaderLine('X-API-Key'), 'secret-key');
     }
 
     public function disconnectWithClientSendsClient(): void
@@ -133,7 +140,7 @@ final class CentrifugoClientTest
         $client = $this->makeClient(['result' => []]);
         $client->disconnect(user: '42', client: 'client-id');
 
-        $body = json_decode((string) $this->lastRequest?->getBody(), true);
+        $body = json_decode((string) $this->requests->last()->getBody(), true);
         Assert::same($body['client'], 'client-id');
     }
 
@@ -142,8 +149,8 @@ final class CentrifugoClientTest
         $client = $this->makeClient(['result' => []]);
         $client->subscribe(user: '42', channel: 'news');
 
-        $body = json_decode((string) $this->lastRequest?->getBody(), true);
-        Assert::same($this->lastRequest?->getUri()->getPath(), '/api/subscribe');
+        $body = json_decode((string) $this->requests->last()->getBody(), true);
+        Assert::same($this->requests->last()->getUri()->getPath(), '/api/subscribe');
         Assert::same($body['user'], '42');
         Assert::same($body['channel'], 'news');
     }
@@ -153,8 +160,8 @@ final class CentrifugoClientTest
         $client = $this->makeClient(['result' => []]);
         $client->unsubscribe(user: '42', channel: 'news');
 
-        $body = json_decode((string) $this->lastRequest?->getBody(), true);
-        Assert::same($this->lastRequest?->getUri()->getPath(), '/api/unsubscribe');
+        $body = json_decode((string) $this->requests->last()->getBody(), true);
+        Assert::same($this->requests->last()->getUri()->getPath(), '/api/unsubscribe');
         Assert::same($body['user'], '42');
         Assert::same($body['channel'], 'news');
     }
@@ -164,8 +171,8 @@ final class CentrifugoClientTest
         $client = $this->makeClient(['result' => []]);
         $client->refresh(user: '42');
 
-        $body = json_decode((string) $this->lastRequest?->getBody(), true);
-        Assert::same($this->lastRequest?->getUri()->getPath(), '/api/refresh');
+        $body = json_decode((string) $this->requests->last()->getBody(), true);
+        Assert::same($this->requests->last()->getUri()->getPath(), '/api/refresh');
         Assert::same($body['user'], '42');
         Assert::array($body)->doesNotHaveKeys('client');
         Assert::array($body)->doesNotHaveKeys('expire_at');
@@ -176,7 +183,7 @@ final class CentrifugoClientTest
         $client = $this->makeClient(['result' => []]);
         $client->refresh(user: '42', client: 'c1');
 
-        $body = json_decode((string) $this->lastRequest?->getBody(), true);
+        $body = json_decode((string) $this->requests->last()->getBody(), true);
         Assert::same($body['client'], 'c1');
     }
 
@@ -185,7 +192,7 @@ final class CentrifugoClientTest
         $client = $this->makeClient(['result' => []]);
         $client->refresh(user: '42', expireAt: 9999999);
 
-        $body = json_decode((string) $this->lastRequest?->getBody(), true);
+        $body = json_decode((string) $this->requests->last()->getBody(), true);
         Assert::same($body['expire_at'], 9999999);
     }
 
@@ -194,8 +201,8 @@ final class CentrifugoClientTest
         $client = $this->makeClient(['result' => []]);
         $client->presenceStats(channel: 'news');
 
-        $body = json_decode((string) $this->lastRequest?->getBody(), true);
-        Assert::same($this->lastRequest?->getUri()->getPath(), '/api/presence_stats');
+        $body = json_decode((string) $this->requests->last()->getBody(), true);
+        Assert::same($this->requests->last()->getUri()->getPath(), '/api/presence_stats');
         Assert::same($body['channel'], 'news');
     }
 
@@ -204,8 +211,8 @@ final class CentrifugoClientTest
         $client = $this->makeClient(['result' => []]);
         $client->historyRemove(channel: 'news');
 
-        $body = json_decode((string) $this->lastRequest?->getBody(), true);
-        Assert::same($this->lastRequest?->getUri()->getPath(), '/api/history_remove');
+        $body = json_decode((string) $this->requests->last()->getBody(), true);
+        Assert::same($this->requests->last()->getUri()->getPath(), '/api/history_remove');
         Assert::same($body['channel'], 'news');
     }
 
@@ -215,7 +222,7 @@ final class CentrifugoClientTest
         $since = ['offset' => 5, 'epoch' => 'abc'];
         $client->history(channel: 'news', since: $since);
 
-        $body = json_decode((string) $this->lastRequest?->getBody(), true);
+        $body = json_decode((string) $this->requests->last()->getBody(), true);
         Assert::same($body['since'], $since);
     }
 
@@ -224,7 +231,7 @@ final class CentrifugoClientTest
         $client = $this->makeClient(['result' => []]);
         $client->disconnect(user: '42', whitelist: true);
 
-        $body = json_decode((string) $this->lastRequest?->getBody(), true);
+        $body = json_decode((string) $this->requests->last()->getBody(), true);
         Assert::true($body['whitelist']);
     }
 
@@ -237,30 +244,17 @@ final class CentrifugoClientTest
 
     private function makeClient(array $responseBody, string $apiKey = 'test-key'): CentrifugoClient
     {
-        $factory = $this->factory;
-        $test = $this;
+        $this->requests = Arg::captor(RequestInterface::class);
+        $httpClient = Understudy::for(ClientInterface::class);
+        $json = json_encode($responseBody, JSON_THROW_ON_ERROR);
 
-        $httpClient = new class ($responseBody, $factory, $test) implements ClientInterface {
-            public function __construct(
-                private readonly array $body,
-                private readonly Psr17Factory $factory,
-                private readonly CentrifugoClientTest $test,
-            ) {}
-
-            #[\Override]
-            public function sendRequest(\Psr\Http\Message\RequestInterface $request): \Psr\Http\Message\ResponseInterface
-            {
-                $this->test->lastRequest = $request;
-                $json = json_encode($this->body, JSON_THROW_ON_ERROR);
-
-                return (new Response(200))->withBody($this->factory->createStream($json));
-            }
-        };
+        when(fn() => $httpClient->sendRequest($this->requests->capture()))
+            ->returns((new Response(200))->withBody($this->factory->createStream($json)));
 
         return new CentrifugoClient(
             httpClient: $httpClient,
-            requestFactory: $factory,
-            streamFactory: $factory,
+            requestFactory: $this->factory,
+            streamFactory: $this->factory,
             apiUrl: 'http://localhost:8000',
             apiKey: $apiKey,
         );

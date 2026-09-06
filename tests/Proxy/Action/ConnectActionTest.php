@@ -7,6 +7,8 @@ namespace Rasuvaeff\Yii3Centrifugo\Tests\Proxy\Action;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use Nyholm\Psr7\ServerRequest;
 use Psr\Http\Message\ServerRequestInterface;
+use Rasuvaeff\Understudy\Arg;
+use Rasuvaeff\Understudy\Understudy;
 use Rasuvaeff\Yii3Centrifugo\Proxy\Action\ConnectAction;
 use Rasuvaeff\Yii3Centrifugo\Proxy\Handler\ConnectProxyHandler;
 use Rasuvaeff\Yii3Centrifugo\Proxy\Internal\ProxyResponseFactory;
@@ -18,6 +20,8 @@ use Testo\Assert;
 use Testo\Codecov\Covers;
 use Testo\Lifecycle\BeforeTest;
 use Testo\Test;
+
+use function Rasuvaeff\Understudy\when;
 
 #[Test]
 #[Covers(ConnectAction::class)]
@@ -41,13 +45,8 @@ final class ConnectActionTest
 
     public function returnsResultEnvelope(): void
     {
-        $handler = new class implements ConnectProxyHandler {
-            #[\Override]
-            public function handle(ConnectRequest $request): ProxyResult|ProxyError|ProxyDisconnect
-            {
-                return new ProxyResult(data: ['user' => '42']);
-            }
-        };
+        $handler = Understudy::for(ConnectProxyHandler::class);
+        when(fn() => $handler->handle(Arg::any()))->returns(new ProxyResult(data: ['user' => '42']));
 
         $action = new ConnectAction(handler: $handler, responseFactory: $this->responseFactory);
         $response = $action->handle($this->makeRequest(['client' => 'c1', 'transport' => 'websocket', 'protocol' => 'json', 'encoding' => 'json']));
@@ -60,13 +59,8 @@ final class ConnectActionTest
 
     public function returnsErrorEnvelope(): void
     {
-        $handler = new class implements ConnectProxyHandler {
-            #[\Override]
-            public function handle(ConnectRequest $request): ProxyResult|ProxyError|ProxyDisconnect
-            {
-                return new ProxyError(code: 403, message: 'permission denied');
-            }
-        };
+        $handler = Understudy::for(ConnectProxyHandler::class);
+        when(fn() => $handler->handle(Arg::any()))->returns(new ProxyError(code: 403, message: 'permission denied'));
 
         $action = new ConnectAction(handler: $handler, responseFactory: $this->responseFactory);
         $response = $action->handle($this->makeRequest([]));
@@ -78,13 +72,8 @@ final class ConnectActionTest
 
     public function returnsDisconnectEnvelope(): void
     {
-        $handler = new class implements ConnectProxyHandler {
-            #[\Override]
-            public function handle(ConnectRequest $request): ProxyResult|ProxyError|ProxyDisconnect
-            {
-                return new ProxyDisconnect(code: 4001, reason: 'unauthorized');
-            }
-        };
+        $handler = Understudy::for(ConnectProxyHandler::class);
+        when(fn() => $handler->handle(Arg::any()))->returns(new ProxyDisconnect(code: 4001, reason: 'unauthorized'));
 
         $action = new ConnectAction(handler: $handler, responseFactory: $this->responseFactory);
         $response = $action->handle($this->makeRequest([]));
@@ -96,18 +85,9 @@ final class ConnectActionTest
 
     public function parsesConnectRequestFields(): void
     {
-        $box = new \stdClass();
-        $handler = new class ($box) implements ConnectProxyHandler {
-            public function __construct(private readonly \stdClass $box) {}
-
-            #[\Override]
-            public function handle(ConnectRequest $request): ProxyResult|ProxyError|ProxyDisconnect
-            {
-                $this->box->request = $request;
-
-                return new ProxyResult();
-            }
-        };
+        $requests = Arg::captor(ConnectRequest::class);
+        $handler = Understudy::for(ConnectProxyHandler::class);
+        when(fn() => $handler->handle($requests->capture()))->returns(new ProxyResult());
 
         $action = new ConnectAction(handler: $handler, responseFactory: $this->responseFactory);
         $action->handle($this->makeRequest([
@@ -118,9 +98,10 @@ final class ConnectActionTest
             'channels' => ['news'],
         ]));
 
-        Assert::same($box->request->client, 'c1');
-        Assert::same($box->request->transport, 'websocket');
-        Assert::same($box->request->channels, ['news']);
+        $request = $requests->last();
+        Assert::same($request->client, 'c1');
+        Assert::same($request->transport, 'websocket');
+        Assert::same($request->channels, ['news']);
     }
 
     private function makeRequest(array $body): ServerRequestInterface

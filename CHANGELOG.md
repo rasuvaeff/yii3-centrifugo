@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+- Tests build their doubles with `rasuvaeff/understudy-testo` instead of
+  hand-written anonymous classes: the PSR-18 client in `CentrifugoClientTest`
+  and `DiContainerTest` (request capture via `Arg::captor()`), the six proxy
+  handler doubles in the Action tests, and the never-called client in
+  `ConfigWiringTest`, which is now a strict double that fails on any HTTP
+  call. Dev-dependency only; the public contract is untouched.
+
 ## 1.0.0 — 2026-06-27
 
 - `CentrifugoClient`: PSR-18 HTTP client for the Centrifugo v6 server API (`publish`, `broadcast`, `subscribe`, `unsubscribe`, `disconnect`, `refresh`, `presence`, `presenceStats`, `history`, `historyRemove`, `channels`, `batch`).
