@@ -7,17 +7,19 @@ namespace Rasuvaeff\Yii3Centrifugo\Tests\Proxy\Action;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use Nyholm\Psr7\ServerRequest;
 use Psr\Http\Message\ServerRequestInterface;
+use Rasuvaeff\Understudy\Arg;
+use Rasuvaeff\Understudy\Understudy;
 use Rasuvaeff\Yii3Centrifugo\Proxy\Action\RpcAction;
 use Rasuvaeff\Yii3Centrifugo\Proxy\Handler\RpcProxyHandler;
 use Rasuvaeff\Yii3Centrifugo\Proxy\Internal\ProxyResponseFactory;
 use Rasuvaeff\Yii3Centrifugo\Proxy\Request\RpcRequest;
-use Rasuvaeff\Yii3Centrifugo\Proxy\Response\ProxyDisconnect;
-use Rasuvaeff\Yii3Centrifugo\Proxy\Response\ProxyError;
 use Rasuvaeff\Yii3Centrifugo\Proxy\Response\ProxyResult;
 use Testo\Assert;
 use Testo\Codecov\Covers;
 use Testo\Lifecycle\BeforeTest;
 use Testo\Test;
+
+use function Rasuvaeff\Understudy\when;
 
 #[Test]
 #[Covers(RpcAction::class)]
@@ -36,18 +38,10 @@ final class RpcActionTest
 
     public function parsesRpcMethodUserAndData(): void
     {
-        $box = new \stdClass();
-        $handler = new class ($box) implements RpcProxyHandler {
-            public function __construct(private readonly \stdClass $box) {}
-
-            #[\Override]
-            public function handle(RpcRequest $request): ProxyResult|ProxyError|ProxyDisconnect
-            {
-                $this->box->request = $request;
-
-                return new ProxyResult(data: ['ok' => true]);
-            }
-        };
+        $requests = Arg::captor(RpcRequest::class);
+        $handler = Understudy::for(RpcProxyHandler::class);
+        when(fn() => $handler->handle($requests->capture()))
+            ->returns(new ProxyResult(data: ['ok' => true]));
 
         $action = new RpcAction(handler: $handler, responseFactory: $this->responseFactory);
         $action->handle($this->makeRequest([
@@ -60,20 +54,16 @@ final class RpcActionTest
             'data' => ['key' => 'x'],
         ]));
 
-        Assert::same($box->request->method, 'getConfig');
-        Assert::same($box->request->user, '42');
-        Assert::same($box->request->data, ['key' => 'x']);
+        $request = $requests->last();
+        Assert::same($request->method, 'getConfig');
+        Assert::same($request->user, '42');
+        Assert::same($request->data, ['key' => 'x']);
     }
 
     public function returnsResultInEnvelope(): void
     {
-        $handler = new class implements RpcProxyHandler {
-            #[\Override]
-            public function handle(RpcRequest $request): ProxyResult|ProxyError|ProxyDisconnect
-            {
-                return new ProxyResult(data: ['value' => 42]);
-            }
-        };
+        $handler = Understudy::for(RpcProxyHandler::class);
+        when(fn() => $handler->handle(Arg::any()))->returns(new ProxyResult(data: ['value' => 42]));
 
         $action = new RpcAction(handler: $handler, responseFactory: $this->responseFactory);
         $response = $action->handle($this->makeRequest([]));

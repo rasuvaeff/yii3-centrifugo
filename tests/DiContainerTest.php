@@ -9,8 +9,9 @@ use Psr\Http\Client\ClientInterface;
 use Psr\Http\Message\RequestFactoryInterface;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseFactoryInterface;
-use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\StreamFactoryInterface;
+use Rasuvaeff\Understudy\Arg;
+use Rasuvaeff\Understudy\Understudy;
 use Rasuvaeff\Yii3Centrifugo\CentrifugoClient;
 use Rasuvaeff\Yii3Centrifugo\Proxy\Internal\ProxyResponseFactory;
 use Rasuvaeff\Yii3Centrifugo\Token\ConnectionTokenIssuer;
@@ -21,6 +22,8 @@ use Testo\Data\DataProvider;
 use Testo\Test;
 use Yiisoft\Di\Container;
 use Yiisoft\Di\ContainerConfig;
+
+use function Rasuvaeff\Understudy\when;
 
 /**
  * Builds the shipped config/di.php through a real yiisoft/di container.
@@ -57,13 +60,20 @@ final class DiContainerTest
 
     public function clientDefinitionReadsApiSettingsFromParams(): void
     {
-        $httpClient = new RecordingHttpClient();
+        $requests = Arg::captor(RequestInterface::class);
+        $httpClient = Understudy::for(ClientInterface::class);
+        $psr17 = new Psr17Factory();
+
+        when(fn() => $httpClient->sendRequest($requests->capture()))
+            ->returns(
+                $psr17->createResponse()
+                    ->withBody($psr17->createStream('{"result":{}}')),
+            );
 
         $client = $this->container($httpClient)->get(CentrifugoClient::class);
         $client->publish(channel: 'news', data: ['x' => 1]);
 
-        $request = $httpClient->lastRequest;
-        Assert::notNull($request);
+        $request = $requests->last();
         Assert::same((string) $request->getUri(), expected: 'https://centrifugo.test/api/publish');
         Assert::same($request->getHeaderLine('X-API-Key'), expected: 'params-api-key');
     }
@@ -97,26 +107,11 @@ final class DiContainerTest
         return new Container(
             ContainerConfig::create()->withDefinitions([
                 ...$definitions,
-                ClientInterface::class => $httpClient ?? new RecordingHttpClient(),
+                ClientInterface::class => $httpClient ?? Understudy::for(ClientInterface::class),
                 RequestFactoryInterface::class => $psr17,
                 StreamFactoryInterface::class => $psr17,
                 ResponseFactoryInterface::class => $psr17,
             ]),
-        );
-    }
-}
-
-final class RecordingHttpClient implements ClientInterface
-{
-    public ?RequestInterface $lastRequest = null;
-
-    #[\Override]
-    public function sendRequest(RequestInterface $request): ResponseInterface
-    {
-        $this->lastRequest = $request;
-
-        return (new Psr17Factory())->createResponse()->withBody(
-            (new Psr17Factory())->createStream('{"result":{}}'),
         );
     }
 }
