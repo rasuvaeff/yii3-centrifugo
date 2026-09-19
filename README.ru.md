@@ -1,23 +1,33 @@
-# Расуваефф/yii3-центрифуго
+# rasuvaeff/yii3-centrifugo
+
 [![Stable Version](https://poser.pugx.org/rasuvaeff/yii3-centrifugo/v/stable)](https://packagist.org/packages/rasuvaeff/yii3-centrifugo)
 [![Total Downloads](https://poser.pugx.org/rasuvaeff/yii3-centrifugo/downloads)](https://packagist.org/packages/rasuvaeff/yii3-centrifugo)
 [![Build](https://github.com/rasuvaeff/yii3-centrifugo/actions/workflows/build.yml/badge.svg)](https://github.com/rasuvaeff/yii3-centrifugo/actions/workflows/build.yml)
 [![Static analysis](https://github.com/rasuvaeff/yii3-centrifugo/actions/workflows/static-analysis.yml/badge.svg)](https://github.com/rasuvaeff/yii3-centrifugo/actions/workflows/static-analysis.yml)
 [![Psalm Level](https://shepherd.dev/github/rasuvaeff/yii3-centrifugo/level.svg)](https://shepherd.dev/github/rasuvaeff/yii3-centrifugo)
 [![License](https://poser.pugx.org/rasuvaeff/yii3-centrifugo/license)](https://packagist.org/packages/rasuvaeff/yii3-centrifugo)
-Интеграция Centrifugo v6 с Yii3: полный клиент API HTTP-сервера, эмитенты токенов подключения/подписки JWT и обработчики прокси-событий PSR-15 (подключение, подписка, публикация, обновление, sub_refresh, rpc).
+[English version](README.md)
 
- > Используете помощника по программированию с искусственным интеллектом? [llms.txt](llms.txt) содержит компактную ссылку на API, которую можно вставить в контекст. @@ЛИНИЯ@@
+Интеграция Centrifugo v6 с Yii3: полный клиент HTTP server API, эмитенты JWT-токенов
+подключения/подписки и PSR-15 обработчики прокси-событий (connect, subscribe, publish,
+refresh, sub_refresh, rpc).
+
+> Используете AI-ассистента? В [llms.txt](llms.txt) — компактный API-справочник,
+> который можно вставить в контекст.
+
 ## Требования
+
 - PHP 8.3–8.5
- - Centrifugo v6
- - HTTP-клиент PSR-18 (например, `guzzlehttp/guzzle`, `symfony/http-client`)
- - Фабрика PSR-17 (например, `nyholm/psr7`, `guzzlehttp/psr7`)
+- Centrifugo v6
+- PSR-18 HTTP-клиент (например, `guzzlehttp/guzzle`, `symfony/http-client`)
+- PSR-17 фабрика (например, `nyholm/psr7`, `guzzlehttp/psr7`)
 
 ## Установка
+
 ```bash
 composer require rasuvaeff/yii3-centrifugo
 ```
+
 Затем настройте в `config/params.php`:
 
 ```php
@@ -28,26 +38,31 @@ composer require rasuvaeff/yii3-centrifugo
     'token_ttl'          => 3600,
 ],
 ```
+
 ## Использование
-### API-клиент сервера
-«CentrifugoClient» предоставляет все методы HTTP API Centrifugo v6 OSS. Для этого требуется, чтобы клиент PSR-18 и фабрики PSR-17 были связаны в контейнере DI. @@ЛИНИЯ@@
+
+### Клиент Server API
+
+`CentrifugoClient` предоставляет все методы HTTP API Centrifugo v6 OSS. Требует,
+чтобы PSR-18 клиент и PSR-17 фабрики были привязаны в DI-контейнере.
+
 ```php
 use Rasuvaeff\Yii3Centrifugo\CentrifugoClient;
 use Rasuvaeff\Yii3Centrifugo\BatchCommand;
 
 $client = $container->get(CentrifugoClient::class);
 
-// Publish to a channel
+// Публикация в канал
 $client->publish(channel: 'news', data: ['title' => 'Breaking news']);
 
-// Broadcast to multiple channels
+// Публикация в несколько каналов
 $client->broadcast(channels: ['news', 'alerts'], data: ['ping' => 1]);
 
-// Manage subscriptions
+// Управление подписками
 $client->subscribe(user: '42', channel: 'private#42');
 $client->unsubscribe(user: '42', channel: 'private#42');
 
-// Disconnect a user
+// Отключение пользователя
 $client->disconnect(user: '42');
 
 // Presence
@@ -58,46 +73,49 @@ $stats = $client->presenceStats(channel: 'news');
 $history = $client->history(channel: 'news', limit: 50);
 $client->historyRemove(channel: 'news');
 
-// Cluster info
+// Информация о кластере
 $channels = $client->channels(pattern: 'news*');
 $info = $client->info();
 
-// Batch (multiple commands in one HTTP request)
+// Batch (несколько команд в одном HTTP-запросе)
 $client->batch(
     new BatchCommand(method: 'publish', params: ['channel' => 'a', 'data' => []]),
     new BatchCommand(method: 'publish', params: ['channel' => 'b', 'data' => []]),
 );
 ```
+
 | Метод | Описание |
- |---|---|
- | `публиковать(канал, данные)` | Опубликовать на одном канале |
- | `трансляция(каналы, данные)` | Публикация на многих каналах |
- | `подписаться(пользователь, канал)` | Подписаться на пользователя на стороне сервера |
- | `отписаться(пользователь, канал)` | Отменить подписку пользователя на стороне сервера |
- | `disconnect(пользователь, клиент?, белый список?)` | Отключить пользователя |
- | `обновить(пользователь, клиент?, expireAt?)` | Обновить соединение |
- | `присутствие(канал)` | Подробная информация о присутствии |
- | `presenceStats(канал)` | Совокупный показатель присутствия |
- | `история(канал, предел?, обратный ход?, с тех пор?)` | История сообщений канала |
- | `историяRemove(канал)` | Очистить историю канала |
- | `каналы(шаблон?)` | Список активных каналов |
- | `информация()` | Информация об узле кластера |
- | `пакет (BatchCommand ...)` | Несколько команд в одном запросе | @@ЛИНИЯ@@
-### Выпуск токена JWT
+|---|---|
+| `publish(channel, data)` | Публикация в один канал |
+| `broadcast(channels, data)` | Публикация в несколько каналов |
+| `subscribe(user, channel)` | Серверная подписка пользователя |
+| `unsubscribe(user, channel)` | Серверная отписка пользователя |
+| `disconnect(user, client?, whitelist?)` | Отключение пользователя |
+| `refresh(user, client?, expireAt?)` | Обновление соединения |
+| `presence(channel)` | Детальная информация о присутствии |
+| `presenceStats(channel)` | Агрегированные счётчики присутствия |
+| `history(channel, limit?, reverse?, since?)` | История сообщений канала |
+| `historyRemove(channel)` | Очистка истории канала |
+| `channels(pattern?)` | Список активных каналов |
+| `info()` | Информация об узле кластера |
+| `batch(BatchCommand ...)` | Несколько команд в одном запросе |
+
+### Выпуск JWT-токенов
+
 ```php
 use Rasuvaeff\Yii3Centrifugo\Token\ConnectionTokenIssuer;
 use Rasuvaeff\Yii3Centrifugo\Token\SubscriptionTokenIssuer;
 
-// Connection token (sent to client on login)
+// Токен подключения (выдаётся клиенту при логине)
 $issuer = $container->get(ConnectionTokenIssuer::class);
 $jwt = $issuer->issue(
     userId: '42',
     ttl: 3600,
-    channels: ['news'],       // optional auto-subscribe
-    info: ['name' => 'Alice'], // optional user info
+    channels: ['news'],       // опциональная автоподписка
+    info: ['name' => 'Alice'], // опциональная информация о пользователе
 );
 
-// Subscription token (sent when client requests private channel access)
+// Токен подписки (выдаётся, когда клиент запрашивает доступ к приватному каналу)
 $subIssuer = $container->get(SubscriptionTokenIssuer::class);
 $jwt = $subIssuer->issue(
     userId: '42',
@@ -106,8 +124,11 @@ $jwt = $subIssuer->issue(
     info: ['role' => 'admin'],
 );
 ```
+
 ### Прокси-события
-Centrifugo может проксировать события жизненного цикла соединения на ваш сервер через HTTP. Настройте конечные точки в `centrifugo.json`:
+
+Centrifugo может проксировать события жизненного цикла соединения на ваш backend
+по HTTP. Настройте конечные точки в `centrifugo.json`:
 
 ```json
 {
@@ -117,6 +138,7 @@ Centrifugo может проксировать события жизненног
     }
 }
 ```
+
 Зарегистрируйте маршруты в приложении Yii3:
 
 ```php
@@ -126,7 +148,8 @@ use Rasuvaeff\Yii3Centrifugo\Proxy\Action\SubscribeAction;
 Route::post('/centrifugo/connect', ConnectAction::class),
 Route::post('/centrifugo/subscribe', SubscribeAction::class),
 ```
-Реализуйте интерфейс обработчика в своем приложении:
+
+Реализуйте интерфейс обработчика в своём приложении:
 
 ```php
 use Rasuvaeff\Yii3Centrifugo\Proxy\Handler\ConnectProxyHandler;
@@ -152,7 +175,8 @@ final readonly class AppConnectHandler implements ConnectProxyHandler
     }
 }
 ```
-Привяжите свой обработчик к контейнеру DI:
+
+Привяжите свой обработчик в DI-контейнере:
 
 ```php
 // config/common/di/centrifugo.php
@@ -162,29 +186,42 @@ return [
     ConnectProxyHandler::class => AppConnectHandler::class,
 ];
 ```
-#### Доступные обработчики прокси
-| Интерфейс обработчика | Класс действия | Событие Центрифуго |
- |---|---|---|
- | `ConnectProxyHandler` | `ConnectAction` | Клиент подключается |
- | `RefreshProxyHandler` | `ОбновитьДействие` | Обновление соединения |
- | `SubscribeProxyHandler` | `ПодписатьДействие` | Клиент подписывается на канал |
- | `PublishProxyHandler` | `ПубликацияДействие` | Клиент публикует в канале |
- | `SubRefreshProxyHandler` | `SubRefreshAction` | Обновление подписки |
- | `RpcProxyHandler` | `RpcAction` | Клиентский вызов RPC | @@ЛИНИЯ@@
+
+#### Доступные прокси-обработчики
+
+| Интерфейс обработчика | Класс action | Событие Centrifugo |
+|---|---|---|
+| `ConnectProxyHandler` | `ConnectAction` | Клиент подключается |
+| `RefreshProxyHandler` | `RefreshAction` | Обновление соединения |
+| `SubscribeProxyHandler` | `SubscribeAction` | Клиент подписывается на канал |
+| `PublishProxyHandler` | `PublishAction` | Клиент публикует в канал |
+| `SubRefreshProxyHandler` | `SubRefreshAction` | Обновление подписки |
+| `RpcProxyHandler` | `RpcAction` | RPC-вызов клиента |
+
 #### Типы ответов прокси
-| Тип | Конверт JSON | Диапазон кодов |
- |---|---|---|
- | `ProxyResult(массив $data)` | `{"результат": {...}}` | — |
- | `ProxyError(int $code, string $message)` | `{"ошибка": {"код": N, "сообщение": "..."}}` | 400–1999 |
- | `ProxyDisconnect(int $code, string $reason)` | `{"disconnect": {"код": N, "причина": "..."}}` | 4000–4999 | @@ЛИНИЯ@@
+
+| Тип | JSON-конверт | Диапазон кодов |
+|---|---|---|
+| `ProxyResult(array $data)` | `{"result": {...}}` | — |
+| `ProxyError(int $code, string $message)` | `{"error": {"code": N, "message": "..."}}` | 400–1999 |
+| `ProxyDisconnect(int $code, string $reason)` | `{"disconnect": {"code": N, "reason": "..."}}` | 4000–4999 |
+
 ## Безопасность
-- Конечные точки прокси-сервера должны быть доступны только с сервера Centrifugo (сетевой список управления доступом или общий секретный заголовок через конфигурацию `proxy.http_headers`).
- — секрет HMAC и ключ API вводятся из params/env, а не запрограммированы жестко.
- — `CentrifugoApiException` выдается при ошибках API Centrifugo (ненулевая `error` в ответе).
- — `ProxyError` и `ProxyDisconnect` проверяют диапазоны кода в конструкторах — недопустимые коды вызывают `InvalidArgumentException`. @@ЛИНИЯ@@
+
+- Прокси-эндпоинты должны быть доступны только с сервера Centrifugo (сетевой ACL
+  или общий секретный заголовок через конфигурацию `proxy.http_headers`).
+- HMAC-секрет и API-ключ приходят из params/env, а не захардкожены.
+- `CentrifugoApiException` выбрасывается при ошибках API Centrifugo (ненулевой
+  `error` в ответе).
+- `ProxyError` и `ProxyDisconnect` валидируют диапазоны кодов в конструкторах —
+  недопустимые коды бросают `InvalidArgumentException`.
+
 ## Примеры
-См. [`examples/`](examples/) для ознакомления с работоспособными скриптами. @@ЛИНИЯ@@
+
+См. [`examples/`](examples/) — работоспособные скрипты.
+
 ## Разработка
+
 ```bash
 make install
 make build
@@ -192,6 +229,10 @@ make cs-fix
 make psalm
 make test
 ```
-На хосте нет PHP или Composer — все команды выполняются внутри Docker-контейнера `composer:2`. @@ЛИНИЯ@@
+
+На хосте нет PHP и Composer — все команды выполняются внутри Docker-контейнера
+`composer:2`.
+
 ## Лицензия
-BSD-3-пункт. См. [LICENSE.md](LICENSE.md).
+
+BSD-3-Clause. См. [LICENSE.md](LICENSE.md).
