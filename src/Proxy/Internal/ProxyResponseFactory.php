@@ -40,7 +40,7 @@ final readonly class ProxyResponseFactory
     public static function parseBody(\Psr\Http\Message\ServerRequestInterface $request): array
     {
         /** @var array<string, mixed> $body */
-        $body = json_decode((string) $request->getBody(), true, 512, JSON_THROW_ON_ERROR);
+        $body = json_decode((string) $request->getBody(), associative: true, depth: 512, flags: JSON_THROW_ON_ERROR);
 
         return $body;
     }

@@ -51,7 +51,7 @@ final class ConnectActionTest
         $action = new ConnectAction(handler: $handler, responseFactory: $this->responseFactory);
         $response = $action->handle($this->makeRequest(['client' => 'c1', 'transport' => 'websocket', 'protocol' => 'json', 'encoding' => 'json']));
 
-        $body = json_decode((string) $response->getBody(), true);
+        $body = json_decode((string) $response->getBody(), associative: true);
         Assert::same($response->getStatusCode(), 200);
         Assert::same($body['result'], ['user' => '42']);
         Assert::array($body)->doesNotHaveKeys('error');
@@ -65,7 +65,7 @@ final class ConnectActionTest
         $action = new ConnectAction(handler: $handler, responseFactory: $this->responseFactory);
         $response = $action->handle($this->makeRequest([]));
 
-        $body = json_decode((string) $response->getBody(), true);
+        $body = json_decode((string) $response->getBody(), associative: true);
         Assert::same($body['error']['code'], 403);
         Assert::same($body['error']['message'], 'permission denied');
     }
@@ -78,7 +78,7 @@ final class ConnectActionTest
         $action = new ConnectAction(handler: $handler, responseFactory: $this->responseFactory);
         $response = $action->handle($this->makeRequest([]));
 
-        $body = json_decode((string) $response->getBody(), true);
+        $body = json_decode((string) $response->getBody(), associative: true);
         Assert::same($body['disconnect']['code'], 4001);
         Assert::same($body['disconnect']['reason'], 'unauthorized');
     }

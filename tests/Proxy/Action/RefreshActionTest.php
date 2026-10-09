@@ -50,7 +50,7 @@ final class RefreshActionTest
             'user' => '55',
         ]));
 
-        $body = json_decode((string) $response->getBody(), true);
+        $body = json_decode((string) $response->getBody(), associative: true);
         Assert::same($requests->last()->user, '55');
         Assert::same($body['result']['expire_at'], 9999);
     }
