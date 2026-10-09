@@ -5,6 +5,7 @@
 | `publish.php` | Publish a message via server API | Yes (Centrifugo v6) |
 | `token.php` | Issue connection and subscription JWT | No |
 | `proxy-handler.php` | Skeleton connect proxy handler | No |
+| `testing.php` | Unit-test publishing code with `InMemoryCentrifugoClient` | No |
 
 ## Setup
 
@@ -17,4 +18,4 @@ CENTRIFUGO_SECRET=your-hmac-secret \
 php examples/publish.php
 ```
 
-No server needed for `token.php` and `proxy-handler.php`.
+No server needed for `token.php`, `proxy-handler.php` and `testing.php`.

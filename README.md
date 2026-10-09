@@ -115,6 +115,34 @@ try {
 }
 ```
 
+### Testing code that publishes
+
+Depend on `CentrifugoClientInterface` (bound in `config/di.php` to the same shared `CentrifugoClient`) and use the bundled in-memory double in tests:
+
+```php
+use Rasuvaeff\Yii3Centrifugo\CentrifugoTransportException;
+use Rasuvaeff\Yii3Centrifugo\Testing\InMemoryCentrifugoClient;
+
+$centrifugo = new InMemoryCentrifugoClient();
+$notifier = new ArticleNotifier($centrifugo);   // takes CentrifugoClientInterface
+
+$notifier->articleUpdated(7);
+$centrifugo->publishedTo('articles');           // [['id' => 7]]
+
+$centrifugo->failNextWith(new CentrifugoTransportException('down'));
+$notifier->articleUpdated(8);                   // the next call throws
+```
+
+| Method | Description |
+|---|---|
+| `calls()` | Every call: `list<array{method, params}>`, params named as in the Centrifugo API |
+| `published()` | `list<array{channel, data}>` from `publish()` and `broadcast()` (one entry per channel) |
+| `publishedTo(channel)` | Data delivered to one channel |
+| `failNextWith(Throwable)` | The next call of any method throws it and is not recorded; failures queue |
+| `reset()` | Forget calls and queued failures |
+
+All API methods of the double return `[]`.
+
 ### JWT Token Issuance
 
 ```php

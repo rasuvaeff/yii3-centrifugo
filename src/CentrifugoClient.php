@@ -12,7 +12,7 @@ use Psr\Http\Message\StreamFactoryInterface;
 /**
  * @api
  */
-final readonly class CentrifugoClient
+final readonly class CentrifugoClient implements CentrifugoClientInterface
 {
     public function __construct(
         private ClientInterface $httpClient,
@@ -22,26 +22,31 @@ final readonly class CentrifugoClient
         private string $apiKey,
     ) {}
 
+    #[\Override]
     public function publish(string $channel, mixed $data): array
     {
         return $this->send(method: 'publish', payload: ['channel' => $channel, 'data' => $data]);
     }
 
+    #[\Override]
     public function broadcast(array $channels, mixed $data): array
     {
         return $this->send(method: 'broadcast', payload: ['channels' => $channels, 'data' => $data]);
     }
 
+    #[\Override]
     public function subscribe(string $user, string $channel): array
     {
         return $this->send(method: 'subscribe', payload: ['user' => $user, 'channel' => $channel]);
     }
 
+    #[\Override]
     public function unsubscribe(string $user, string $channel): array
     {
         return $this->send(method: 'unsubscribe', payload: ['user' => $user, 'channel' => $channel]);
     }
 
+    #[\Override]
     public function disconnect(string $user, string $client = '', bool $whitelist = false): array
     {
         $payload = ['user' => $user];
@@ -57,6 +62,7 @@ final readonly class CentrifugoClient
         return $this->send(method: 'disconnect', payload: $payload);
     }
 
+    #[\Override]
     public function refresh(string $user, string $client = '', ?int $expireAt = null): array
     {
         $payload = ['user' => $user];
@@ -72,16 +78,19 @@ final readonly class CentrifugoClient
         return $this->send(method: 'refresh', payload: $payload);
     }
 
+    #[\Override]
     public function presence(string $channel): array
     {
         return $this->send(method: 'presence', payload: ['channel' => $channel]);
     }
 
+    #[\Override]
     public function presenceStats(string $channel): array
     {
         return $this->send(method: 'presence_stats', payload: ['channel' => $channel]);
     }
 
+    #[\Override]
     public function history(
         string $channel,
         int $limit = 0,
@@ -105,11 +114,13 @@ final readonly class CentrifugoClient
         return $this->send(method: 'history', payload: $payload);
     }
 
+    #[\Override]
     public function historyRemove(string $channel): array
     {
         return $this->send(method: 'history_remove', payload: ['channel' => $channel]);
     }
 
+    #[\Override]
     public function channels(?string $pattern = null): array
     {
         $payload = [];
@@ -121,11 +132,13 @@ final readonly class CentrifugoClient
         return $this->send(method: 'channels', payload: $payload);
     }
 
+    #[\Override]
     public function info(): array
     {
         return $this->send(method: 'info', payload: []);
     }
 
+    #[\Override]
     public function batch(BatchCommand ...$commands): array
     {
         $encoded = array_map(

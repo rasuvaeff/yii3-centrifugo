@@ -21,7 +21,7 @@ composer require rasuvaeff/yii3-centrifugo
 ### CentrifugoClient
 
 ```php
-$client = $container->get(CentrifugoClient::class);
+$client = $container->get(CentrifugoClientInterface::class); // or CentrifugoClient::class — same instance
 
 $client->publish(channel: 'ch', data: ['x' => 1]);
 $client->broadcast(channels: ['a', 'b'], data: ['x' => 1]);
@@ -41,6 +41,19 @@ $client->batch(
 // All failures extend CentrifugoException:
 //   CentrifugoApiException       — Centrifugo `error` reply, getApiCode()
 //   CentrifugoTransportException — PSR-18 failure, non-2xx (getStatusCode()), non-JSON body; previous kept
+```
+
+### Testing
+
+```php
+// Inject CentrifugoClientInterface (DI alias of CentrifugoClient); in tests:
+$fake = new \Rasuvaeff\Yii3Centrifugo\Testing\InMemoryCentrifugoClient();
+$fake->publish(channel: 'news', data: ['x' => 1]);
+$fake->published();             // [['channel' => 'news', 'data' => ['x' => 1]]]
+$fake->publishedTo('news');     // [['x' => 1]]
+$fake->calls();                 // [['method' => 'publish', 'params' => [...]]]
+$fake->failNextWith($e);        // next call throws $e, not recorded
+$fake->reset();
 ```
 
 ### Token Issuers

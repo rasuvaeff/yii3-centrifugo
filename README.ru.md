@@ -119,6 +119,34 @@ try {
 }
 ```
 
+### Тестирование кода, который публикует
+
+Зависьте от `CentrifugoClientInterface` (в `config/di.php` он привязан к тому же общему `CentrifugoClient`) и используйте в тестах встроенный дублёр в памяти:
+
+```php
+use Rasuvaeff\Yii3Centrifugo\CentrifugoTransportException;
+use Rasuvaeff\Yii3Centrifugo\Testing\InMemoryCentrifugoClient;
+
+$centrifugo = new InMemoryCentrifugoClient();
+$notifier = new ArticleNotifier($centrifugo);   // принимает CentrifugoClientInterface
+
+$notifier->articleUpdated(7);
+$centrifugo->publishedTo('articles');           // [['id' => 7]]
+
+$centrifugo->failNextWith(new CentrifugoTransportException('down'));
+$notifier->articleUpdated(8);                   // следующий вызов бросит исключение
+```
+
+| Метод | Описание |
+|---|---|
+| `calls()` | Все вызовы: `list<array{method, params}>`, имена параметров как в API Centrifugo |
+| `published()` | `list<array{channel, data}>` из `publish()` и `broadcast()` (по записи на канал) |
+| `publishedTo(channel)` | Данные, отправленные в один канал |
+| `failNextWith(Throwable)` | Следующий вызов любого метода бросит его и не будет записан; ошибки встают в очередь |
+| `reset()` | Забыть вызовы и очередь ошибок |
+
+Все методы API дублёра возвращают `[]`.
+
 ### Выпуск JWT-токенов
 
 ```php

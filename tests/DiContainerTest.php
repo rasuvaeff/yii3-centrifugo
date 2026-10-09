@@ -13,6 +13,7 @@ use Psr\Http\Message\StreamFactoryInterface;
 use Rasuvaeff\Understudy\Arg;
 use Rasuvaeff\Understudy\Understudy;
 use Rasuvaeff\Yii3Centrifugo\CentrifugoClient;
+use Rasuvaeff\Yii3Centrifugo\CentrifugoClientInterface;
 use Rasuvaeff\Yii3Centrifugo\Proxy\Internal\ProxyResponseFactory;
 use Rasuvaeff\Yii3Centrifugo\Token\ConnectionTokenIssuer;
 use Rasuvaeff\Yii3Centrifugo\Token\SubscriptionTokenIssuer;
@@ -42,6 +43,7 @@ final class DiContainerTest
     public static function definitions(): iterable
     {
         yield 'centrifugo client' => [CentrifugoClient::class];
+        yield 'centrifugo client interface' => [CentrifugoClientInterface::class];
         yield 'connection token issuer' => [ConnectionTokenIssuer::class];
         yield 'subscription token issuer' => [SubscriptionTokenIssuer::class];
         yield 'proxy response factory' => [ProxyResponseFactory::class];
@@ -56,6 +58,16 @@ final class DiContainerTest
         $service = $this->container()->get($id);
 
         Assert::instanceOf($service, $id);
+    }
+
+    public function interfaceResolvesToTheSameClientInstance(): void
+    {
+        $container = $this->container();
+
+        Assert::same(
+            $container->get(CentrifugoClientInterface::class),
+            $container->get(CentrifugoClient::class),
+        );
     }
 
     public function clientDefinitionReadsApiSettingsFromParams(): void
