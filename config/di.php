@@ -5,6 +5,8 @@ declare(strict_types=1);
 use Lcobucci\JWT\Configuration;
 use Lcobucci\JWT\Signer\Hmac\Sha256;
 use Lcobucci\JWT\Signer\Key\InMemory;
+use Psr\Clock\ClockInterface;
+use Psr\Container\ContainerInterface;
 use Psr\Http\Client\ClientInterface;
 use Psr\Http\Message\RequestFactoryInterface;
 use Psr\Http\Message\ResponseFactoryInterface;
@@ -43,7 +45,7 @@ return [
     // alias: the interface and the class resolve to the same shared instance
     CentrifugoClientInterface::class => CentrifugoClient::class,
 
-    ConnectionTokenIssuer::class => static function () use ($params): ConnectionTokenIssuer {
+    ConnectionTokenIssuer::class => static function (ContainerInterface $container) use ($params): ConnectionTokenIssuer {
         $jwtConfig = Configuration::forSymmetricSigner(
             new Sha256(),
             InMemory::plainText($params['centrifugo']['token_hmac_secret']),
@@ -52,10 +54,12 @@ return [
         return new ConnectionTokenIssuer(
             jwtConfig: $jwtConfig,
             defaultTtl: $params['centrifugo']['token_ttl'],
+            // the application's PSR-20 clock when it binds one, else the system clock
+            clock: $container->has(ClockInterface::class) ? $container->get(ClockInterface::class) : null,
         );
     },
 
-    SubscriptionTokenIssuer::class => static function () use ($params): SubscriptionTokenIssuer {
+    SubscriptionTokenIssuer::class => static function (ContainerInterface $container) use ($params): SubscriptionTokenIssuer {
         $jwtConfig = Configuration::forSymmetricSigner(
             new Sha256(),
             InMemory::plainText($params['centrifugo']['token_hmac_secret']),
@@ -64,6 +68,8 @@ return [
         return new SubscriptionTokenIssuer(
             jwtConfig: $jwtConfig,
             defaultTtl: $params['centrifugo']['token_ttl'],
+            // the application's PSR-20 clock when it binds one, else the system clock
+            clock: $container->has(ClockInterface::class) ? $container->get(ClockInterface::class) : null,
         );
     },
 

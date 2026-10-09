@@ -186,6 +186,12 @@ $jwt = $subIssuer->issue(
 );
 ```
 
+`exp` is computed in whole seconds from a PSR-20 clock. When the application binds `Psr\Clock\ClockInterface` in the container, the DI definitions pass it to both issuers; otherwise the system clock is used. In tests, construct the issuer with a fixed clock to assert the exact `exp`:
+
+```php
+$issuer = new ConnectionTokenIssuer(jwtConfig: $jwtConfig, defaultTtl: 3600, clock: $frozenClock);
+```
+
 ### Proxy Events
 
 Centrifugo can proxy connection lifecycle events to your backend over HTTP. Configure endpoints in `centrifugo.json`:

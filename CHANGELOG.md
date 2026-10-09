@@ -37,6 +37,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   double) (#12): `idempotency_key`, `skip_history`, `tags`, `delta`,
   `version` / `version_epoch`; only non-default fields are sent, so existing
   calls send the same request body. The return type stays `array`.
+- `ConnectionTokenIssuer` and `SubscriptionTokenIssuer` accept an optional
+  `?Psr\Clock\ClockInterface $clock = null` (#13); `config/di.php` passes the
+  container's `ClockInterface` when the application binds one and falls back
+  to the system clock otherwise. `exp` is now whole seconds (it used to carry
+  the microseconds of `now`, encoded as a JSON float). `psr/clock` and
+  `psr/container` are now explicit requirements.
 
 ## 1.0.0 — 2026-06-27
 

@@ -66,6 +66,9 @@ $fake->reset();
 ### Token Issuers
 
 ```php
+// exp = clock->now() + ttl, whole seconds. Clock: optional ctor arg
+// `?Psr\Clock\ClockInterface $clock = null` on both issuers; DI passes the
+// container's ClockInterface when bound, else the system clock is used.
 // Connection JWT (sub, exp, optional: channels, info, meta)
 $jwt = $container->get(ConnectionTokenIssuer::class)->issue(
     userId: '42',
