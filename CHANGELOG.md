@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+- `examples/publish.php`: runnable publish with `PublishOptions`
+  (`idempotencyKey`, `tags`) and `CentrifugoException` handling; the examples
+  README referenced it but the script was missing.
+- README / README.ru: the "Proxy Events" config is now in Centrifugo v6 format
+  (`client.proxy`, `channel.proxy` with `*_proxy_enabled`, `rpc.proxy`), with
+  the `http.static_headers` secret checked by `ProxySecretMiddleware`.
+- `make release-check` marks the mounted repository as a git `safe.directory`
+  inside the container, like `make bc-check`, so its BC step can read tags.
+- `composer bc-check` installs development dependencies for both compared
+  versions: `Console\CentrifugoDoctorCommand` extends a class from the
+  suggested `symfony/console`, and without it the check reported 7 skipped
+  reflections as BC breaks against v1.1.0.
+
 ## 1.1.0 — 2026-10-10
 
 - Tests build their doubles with `rasuvaeff/understudy-testo` instead of
