@@ -163,6 +163,15 @@ return [
 ];
 ```
 
+### Diagnostics
+
+```php
+// ./yii centrifugo:doctor  (auto-registered via params-console when yiisoft/yii-console is installed;
+// needs symfony/console — suggested, not required). Exit: 0 ok, 2 config, 4 upstream (first failure).
+$report = $container->get(\Rasuvaeff\Yii3Centrifugo\Doctor\CentrifugoDoctor::class)->diagnose(); // console-free
+$report->healthy(); $report->exitCode(); $report->checks; // list<CheckResult{name, category, status, details}>
+```
+
 ### Params
 
 ```php

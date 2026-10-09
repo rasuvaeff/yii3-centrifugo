@@ -1,0 +1,20 @@
+{
+    "symbol-whitelist": [
+        "Symfony\\Component\\Console\\Attribute\\AsCommand",
+        "Symfony\\Component\\Console\\Command\\Command",
+        "Symfony\\Component\\Console\\Input\\InputInterface",
+        "Symfony\\Component\\Console\\Output\\OutputInterface"
+    ],
+    "php-core-extensions": [
+        "Core",
+        "date",
+        "json",
+        "hash",
+        "pcre",
+        "Reflection",
+        "SPL",
+        "random",
+        "standard"
+    ],
+    "scan-files": []
+}

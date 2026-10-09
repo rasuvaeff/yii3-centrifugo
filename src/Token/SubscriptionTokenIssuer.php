@@ -22,6 +22,9 @@ final readonly class SubscriptionTokenIssuer
         private ?ClockInterface $clock = null,
     ) {}
 
+    /**
+     * @return non-empty-string the signed JWT
+     */
     public function issue(
         string $userId,
         string $channel,
