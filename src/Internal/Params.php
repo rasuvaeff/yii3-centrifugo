@@ -7,6 +7,8 @@ namespace Rasuvaeff\Yii3Centrifugo\Internal;
 use Lcobucci\JWT\Configuration;
 use Lcobucci\JWT\Signer\Hmac\Sha256;
 use Lcobucci\JWT\Signer\Key\InMemory;
+use Psr\Container\ContainerInterface;
+use Psr\Http\Client\ClientInterface;
 use Rasuvaeff\Yii3Centrifugo\InvalidConfigException;
 
 /**
@@ -45,6 +47,35 @@ final readonly class Params
         }
 
         return $url;
+    }
+
+    /**
+     * The PSR-18 client the server API client uses: the container entry named
+     * by `http_client`, the application-wide `ClientInterface` by default.
+     *
+     * @param array<array-key, mixed> $params
+     */
+    public static function httpClient(array $params, ContainerInterface $container): ClientInterface
+    {
+        $id = self::value($params, 'http_client') ?? ClientInterface::class;
+
+        if (!is_string($id) || $id === '') {
+            throw new InvalidConfigException(self::path('http_client') . ' must be a container id');
+        }
+
+        $client = $container->get($id);
+
+        if (!$client instanceof ClientInterface) {
+            throw new InvalidConfigException(sprintf(
+                '%s must name a %s service, "%s" resolves to %s',
+                self::path('http_client'),
+                ClientInterface::class,
+                $id,
+                get_debug_type($client),
+            ));
+        }
+
+        return $client;
     }
 
     /**

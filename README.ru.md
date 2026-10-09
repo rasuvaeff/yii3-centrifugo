@@ -47,8 +47,29 @@ composer require rasuvaeff/yii3-centrifugo
 | `api_key` | строка; **пустая допустима** для Centrifugo с `api_insecure` (не делайте так в production) | `CentrifugoClient` |
 | `token_hmac_secret` | не короче 32 байт (HS256 нужен ключ 256 бит) | issuer'ы токенов |
 | `token_ttl` | целое > 0 | issuer'ы токенов |
+| `http_client` | id PSR-18 клиента в контейнере; по умолчанию `Psr\Http\Client\ClientInterface::class` | `CentrifugoClient` |
 
 Приложению, которое только публикует, настраивать секрет токенов не нужно.
+
+#### Отдельный HTTP-клиент (таймауты)
+
+По умолчанию клиент серверного API берёт общий PSR-18 клиент приложения. Чтобы время публикации было ограничено независимо от других интеграций, зарегистрируйте отдельный клиент и укажите его в `http_client`:
+
+```php
+// config/common/di/centrifugo.php
+return [
+    'centrifugo.http' => static fn(): \GuzzleHttp\Client => new \GuzzleHttp\Client([
+        'timeout' => 2.0,
+        'connect_timeout' => 0.5,
+    ]),
+];
+
+// config/common/params.php
+'centrifugo' => [
+    // ...
+    'http_client' => 'centrifugo.http',
+],
+```
 
 ## Использование
 

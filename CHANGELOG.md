@@ -50,6 +50,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   instead of a low-level `lcobucci/jwt` error at first use. An empty `api_key`
   stays valid (Centrifugo `api_insecure`), and the client still resolves with
   an unset token secret.
+- New params key `http_client` (#16): the container id of the PSR-18 client
+  `CentrifugoClient` uses, `Psr\Http\Client\ClientInterface::class` by
+  default. Point it at a dedicated client with its own timeouts; an id that
+  does not resolve to a PSR-18 client throws `InvalidConfigException`.
 
 ## 1.0.0 — 2026-06-27
 

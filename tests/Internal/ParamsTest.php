@@ -4,9 +4,12 @@ declare(strict_types=1);
 
 namespace Rasuvaeff\Yii3Centrifugo\Tests\Internal;
 
+use Psr\Container\ContainerInterface;
+use Psr\Http\Client\ClientInterface;
 use Rasuvaeff\PropertyTesting\Classify;
 use Rasuvaeff\PropertyTesting\Gen;
 use Rasuvaeff\PropertyTesting\Property;
+use Rasuvaeff\Understudy\Understudy;
 use Rasuvaeff\Yii3Centrifugo\Internal\Params;
 use Rasuvaeff\Yii3Centrifugo\InvalidConfigException;
 use Testo\Assert;
@@ -14,6 +17,8 @@ use Testo\Codecov\Covers;
 use Testo\Data\DataProvider;
 use Testo\Expect;
 use Testo\Test;
+
+use function Rasuvaeff\Understudy\when;
 
 #[Test]
 #[Covers(Params::class)]
@@ -164,6 +169,54 @@ final class ParamsTest
         Expect::exception(InvalidConfigException::class);
 
         Params::tokenTtl($this->params(token_ttl: '3600'));
+    }
+
+    public function httpClientDefaultsToTheApplicationClient(): void
+    {
+        $client = Understudy::for(ClientInterface::class);
+        $container = Understudy::for(ContainerInterface::class);
+        when(fn() => $container->get(ClientInterface::class))->returns($client);
+
+        Assert::same(Params::httpClient($this->params(), $container), $client);
+    }
+
+    public function httpClientIsTakenFromTheConfiguredId(): void
+    {
+        $client = Understudy::for(ClientInterface::class);
+        $container = Understudy::for(ContainerInterface::class);
+        when(fn() => $container->get('centrifugo.http'))->returns($client);
+
+        Assert::same(Params::httpClient($this->params(http_client: 'centrifugo.http'), $container), $client);
+    }
+
+    /**
+     * @return iterable<string, array{mixed}>
+     */
+    public static function invalidHttpClientIds(): iterable
+    {
+        yield 'empty' => [''];
+        yield 'not a string' => [42];
+    }
+
+    #[DataProvider('invalidHttpClientIds')]
+    public function invalidHttpClientIdIsRejected(mixed $id): void
+    {
+        Expect::exception(InvalidConfigException::class)
+            ->withMessage("params['centrifugo']['http_client'] must be a container id");
+
+        Params::httpClient($this->params(http_client: $id), Understudy::strict(Understudy::for(ContainerInterface::class)));
+    }
+
+    public function httpClientIdMustResolveToAPsr18Client(): void
+    {
+        $container = Understudy::for(ContainerInterface::class);
+        when(fn() => $container->get('logger'))->returns(new \stdClass());
+
+        Expect::exception(InvalidConfigException::class)->withMessage(
+            "params['centrifugo']['http_client'] must name a Psr\\Http\\Client\\ClientInterface service, \"logger\" resolves to stdClass",
+        );
+
+        Params::httpClient($this->params(http_client: 'logger'), $container);
     }
 
     /**
