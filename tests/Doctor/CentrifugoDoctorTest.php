@@ -113,6 +113,17 @@ final class CentrifugoDoctorTest
         Assert::same($report->exitCode(), 2);
     }
 
+    public function containerEntryThatIsNotAClientFailsAsConfig(): void
+    {
+        $container = Understudy::for(ContainerInterface::class);
+        when(fn() => $container->get(CentrifugoClientInterface::class))->returns(new \stdClass());
+
+        $report = (new CentrifugoDoctor(params: $this->params(), container: $container))->diagnose();
+
+        Assert::same($this->summary($report)[2], ['server API', 'fail', 'cannot build the client: container returned stdClass']);
+        Assert::same($report->exitCode(), 2);
+    }
+
     public function exitCodeIsTheCategoryOfTheFirstFailure(): void
     {
         $client = new InMemoryCentrifugoClient();
@@ -150,7 +161,7 @@ final class CentrifugoDoctorTest
         $client = new InMemoryCentrifugoClient();
         $client->failNextWith(new CentrifugoTransportException('down'));
 
-        foreach ([$this->diagnose(client: $client), $this->diagnose(params: ['token_ttl' => 0])] as $report) {
+        foreach ([$this->diagnose(client: $client), $this->diagnose(params: ['token_ttl' => 0], client: new InMemoryCentrifugoClient())] as $report) {
             foreach ($report->checks as $check) {
                 Assert::false(str_contains($check->details, self::SECRET));
                 Assert::false(str_contains($check->details, 'doctor-api-key'));

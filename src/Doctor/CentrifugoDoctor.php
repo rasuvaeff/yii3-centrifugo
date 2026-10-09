@@ -84,9 +84,16 @@ final readonly class CentrifugoDoctor
     {
         try {
             $client = $this->container->get(CentrifugoClientInterface::class);
-            \assert($client instanceof CentrifugoClientInterface);
         } catch (\Throwable $e) {
             return $this->failed('server API', CheckCategory::Config, 'cannot build the client: ' . $e->getMessage());
+        }
+
+        if (!$client instanceof CentrifugoClientInterface) {
+            return $this->failed(
+                'server API',
+                CheckCategory::Config,
+                sprintf('cannot build the client: container returned %s', get_debug_type($client)),
+            );
         }
 
         try {
