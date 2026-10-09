@@ -18,6 +18,7 @@ use Rasuvaeff\Understudy\Arg;
 use Rasuvaeff\Understudy\Understudy;
 use Rasuvaeff\Yii3Centrifugo\CentrifugoClient;
 use Rasuvaeff\Yii3Centrifugo\CentrifugoClientInterface;
+use Rasuvaeff\Yii3Centrifugo\InvalidConfigException;
 use Rasuvaeff\Yii3Centrifugo\Proxy\Internal\ProxyResponseFactory;
 use Rasuvaeff\Yii3Centrifugo\Token\ConnectionTokenIssuer;
 use Rasuvaeff\Yii3Centrifugo\Token\SubscriptionTokenIssuer;
@@ -150,9 +151,49 @@ final class DiContainerTest
         return $exp->getTimestamp();
     }
 
-    private function container(?ClientInterface $httpClient = null, ?ClockInterface $clock = null): Container
+    public function clientResolvesWithThePackageDefaultParams(): void
     {
-        $params = [
+        // The shipped defaults have an empty token secret: an application that
+        // only publishes must not be forced to configure tokens.
+        $params = require __DIR__ . '/../config/params.php';
+
+        $client = $this->container(params: $params)->get(CentrifugoClient::class);
+
+        Assert::instanceOf($client, CentrifugoClient::class);
+    }
+
+    public function issuerWithAShortSecretFailsNamingTheParamsKey(): void
+    {
+        $params = require __DIR__ . '/../config/params.php';
+
+        try {
+            $this->container(params: $params)->get(ConnectionTokenIssuer::class);
+            Assert::fail('Expected InvalidConfigException');
+        } catch (\Throwable $e) {
+            $config = $e instanceof InvalidConfigException ? $e : $e->getPrevious();
+            Assert::instanceOf($config, InvalidConfigException::class);
+            Assert::string($config->getMessage())->contains("params['centrifugo']['token_hmac_secret']");
+        }
+    }
+
+    public function clientWithAnInvalidUrlFailsNamingTheParamsKey(): void
+    {
+        try {
+            $this->container(params: ['centrifugo' => ['api_url' => 'centrifugo:8000']])->get(CentrifugoClient::class);
+            Assert::fail('Expected InvalidConfigException');
+        } catch (\Throwable $e) {
+            $config = $e instanceof InvalidConfigException ? $e : $e->getPrevious();
+            Assert::instanceOf($config, InvalidConfigException::class);
+            Assert::string($config->getMessage())->contains("params['centrifugo']['api_url']");
+        }
+    }
+
+    /**
+     * @param array<array-key, mixed>|null $params
+     */
+    private function container(?ClientInterface $httpClient = null, ?ClockInterface $clock = null, ?array $params = null): Container
+    {
+        $params ??= [
             'centrifugo' => [
                 'api_url' => 'https://centrifugo.test',
                 'api_key' => 'params-api-key',

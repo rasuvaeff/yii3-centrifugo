@@ -163,4 +163,7 @@ return [
     'token_hmac_secret' => 'at-least-32-chars',
     'token_ttl'         => 3600,
 ],
+// Validated when the using service is built; InvalidConfigException names the key:
+// api_url http(s) URL with host; api_key string (empty OK = api_insecure);
+// token_hmac_secret >= 32 bytes; token_ttl int > 0. Secret/ttl only checked by issuers.
 ```

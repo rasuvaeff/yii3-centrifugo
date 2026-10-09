@@ -43,6 +43,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   to the system clock otherwise. `exp` is now whole seconds (it used to carry
   the microseconds of `now`, encoded as a JSON float). `psr/clock` and
   `psr/container` are now explicit requirements.
+- Params are validated when the container builds the service that uses them
+  (#14): `api_url` must be an http(s) URL with a host, `api_key` a string,
+  `token_hmac_secret` at least 32 bytes, `token_ttl` an integer > 0. A
+  violation throws the new `InvalidConfigException` naming the params key
+  instead of a low-level `lcobucci/jwt` error at first use. An empty `api_key`
+  stays valid (Centrifugo `api_insecure`), and the client still resolves with
+  an unset token secret.
 
 ## 1.0.0 — 2026-06-27
 

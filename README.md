@@ -36,6 +36,17 @@ Then configure in `config/params.php`:
 ],
 ```
 
+Values are validated when the container builds the service that uses them, and an `InvalidConfigException` names the params key (never the value):
+
+| Key | Rule | Checked by |
+|---|---|---|
+| `api_url` | http(s) URL with a host | `CentrifugoClient` |
+| `api_key` | string; **empty is allowed** for a Centrifugo running with `api_insecure` (do not do this in production) | `CentrifugoClient` |
+| `token_hmac_secret` | at least 32 bytes (HS256 needs a 256-bit key) | token issuers |
+| `token_ttl` | integer > 0 | token issuers |
+
+An application that only publishes does not have to configure the token secret.
+
 ## Usage
 
 ### Server API Client
