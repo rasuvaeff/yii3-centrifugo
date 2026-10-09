@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace Rasuvaeff\Yii3Centrifugo;
 
 /**
+ * Centrifugo answered with an `error` object; the code is Centrifugo's own.
+ *
  * @api
  */
-final class CentrifugoApiException extends \RuntimeException
+final class CentrifugoApiException extends CentrifugoException
 {
     public function __construct(string $message, private readonly int $apiCode = 0)
     {

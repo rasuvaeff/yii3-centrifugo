@@ -6,6 +6,7 @@ namespace Rasuvaeff\Yii3Centrifugo\Tests;
 
 use Nyholm\Psr7\Factory\Psr17Factory;
 use Nyholm\Psr7\Response;
+use Psr\Http\Client\ClientExceptionInterface;
 use Psr\Http\Client\ClientInterface;
 use Psr\Http\Message\RequestInterface;
 use Rasuvaeff\Understudy\Arg;
@@ -14,8 +15,11 @@ use Rasuvaeff\Understudy\Understudy;
 use Rasuvaeff\Yii3Centrifugo\BatchCommand;
 use Rasuvaeff\Yii3Centrifugo\CentrifugoApiException;
 use Rasuvaeff\Yii3Centrifugo\CentrifugoClient;
+use Rasuvaeff\Yii3Centrifugo\CentrifugoException;
+use Rasuvaeff\Yii3Centrifugo\CentrifugoTransportException;
 use Testo\Assert;
 use Testo\Codecov\Covers;
+use Testo\Data\DataProvider;
 use Testo\Lifecycle\BeforeTest;
 use Testo\Test;
 
@@ -25,6 +29,7 @@ use function Rasuvaeff\Understudy\when;
 #[Covers(CentrifugoClient::class)]
 #[Covers(CentrifugoApiException::class)]
 #[Covers(BatchCommand::class)]
+#[Covers(CentrifugoTransportException::class)]
 final class CentrifugoClientTest
 {
     private Psr17Factory $factory;
@@ -242,15 +247,137 @@ final class CentrifugoClientTest
         Assert::same($e->getApiCode(), 0);
     }
 
-    private function makeClient(array $responseBody, string $apiKey = 'test-key'): CentrifugoClient
+    public function apiErrorWithoutCodeDefaultsToZero(): void
+    {
+        $client = $this->makeClient(['error' => ['message' => 'err']]);
+
+        try {
+            $client->info();
+            Assert::fail('Expected CentrifugoApiException');
+        } catch (CentrifugoApiException $e) {
+            Assert::same($e->getApiCode(), 0);
+        }
+    }
+
+    public function apiExceptionIsACentrifugoException(): void
+    {
+        Assert::instanceOf(new CentrifugoApiException('error'), CentrifugoException::class);
+    }
+
+    public function clientFailureIsWrappedWithPrevious(): void
+    {
+        $failure = new class ('connection refused') extends \RuntimeException implements ClientExceptionInterface {};
+        $httpClient = Understudy::for(ClientInterface::class);
+        when(fn() => $httpClient->sendRequest(Arg::any()))->throws($failure);
+
+        try {
+            $this->clientWith($httpClient)->publish(channel: 'x', data: []);
+            Assert::fail('Expected CentrifugoTransportException');
+        } catch (CentrifugoTransportException $e) {
+            Assert::same($e->getPrevious(), $failure);
+            Assert::null($e->getStatusCode());
+            Assert::same($e->getMessage(), 'Centrifugo API request "publish" failed: connection refused');
+        }
+    }
+
+    /**
+     * @return iterable<string, array{int}>
+     */
+    public static function failingStatuses(): iterable
+    {
+        yield 'below 2xx' => [199];
+        yield 'redirect' => [300];
+        yield 'unauthorized' => [401];
+        yield 'bad gateway' => [502];
+    }
+
+    #[DataProvider('failingStatuses')]
+    public function non2xxStatusIsATransportError(int $status): void
+    {
+        $client = $this->makeClient(['result' => []], status: $status);
+
+        try {
+            $client->info();
+            Assert::fail('Expected CentrifugoTransportException');
+        } catch (CentrifugoTransportException $e) {
+            Assert::same($e->getStatusCode(), $status);
+            Assert::same($e->getMessage(), sprintf('Centrifugo API request "info" failed with HTTP %d', $status));
+            Assert::null($e->getPrevious());
+        }
+    }
+
+    /**
+     * @return iterable<string, array{int}>
+     */
+    public static function successfulStatuses(): iterable
+    {
+        yield 'lower bound' => [200];
+        yield 'upper bound' => [299];
+    }
+
+    #[DataProvider('successfulStatuses')]
+    public function any2xxStatusIsAccepted(int $status): void
+    {
+        $client = $this->makeClient(['result' => ['version' => '6']], status: $status);
+
+        Assert::same($client->info(), ['version' => '6']);
+    }
+
+    public function invalidJsonIsATransportErrorWithPrevious(): void
+    {
+        $client = $this->makeClientWithRawBody('<html>502 Bad Gateway</html>');
+
+        try {
+            $client->info();
+            Assert::fail('Expected CentrifugoTransportException');
+        } catch (CentrifugoTransportException $e) {
+            Assert::instanceOf($e->getPrevious(), \JsonException::class);
+            Assert::same($e->getStatusCode(), 200);
+            Assert::same($e->getMessage(), 'Centrifugo API request "info" returned a body that is not valid JSON');
+        }
+    }
+
+    public function nonObjectJsonIsATransportError(): void
+    {
+        $client = $this->makeClientWithRawBody('"ok"');
+
+        try {
+            $client->info();
+            Assert::fail('Expected CentrifugoTransportException');
+        } catch (CentrifugoTransportException $e) {
+            Assert::same($e->getStatusCode(), 200);
+            Assert::null($e->getPrevious());
+            Assert::same($e->getMessage(), 'Centrifugo API request "info" returned a body that is not a JSON object');
+        }
+    }
+
+    public function transportExceptionDefaultsToNoStatus(): void
+    {
+        $e = new CentrifugoTransportException('down');
+
+        Assert::null($e->getStatusCode());
+        Assert::same($e->getCode(), 0);
+        Assert::instanceOf($e, CentrifugoException::class);
+    }
+
+    private function makeClient(array $responseBody, string $apiKey = 'test-key', int $status = 200): CentrifugoClient
+    {
+        return $this->makeClientWithRawBody(json_encode($responseBody, JSON_THROW_ON_ERROR), $apiKey, $status);
+    }
+
+    private function makeClientWithRawBody(string $body, string $apiKey = 'test-key', int $status = 200): CentrifugoClient
     {
         $this->requests = Arg::captor(RequestInterface::class);
         $httpClient = Understudy::for(ClientInterface::class);
-        $json = json_encode($responseBody, JSON_THROW_ON_ERROR);
 
         when(fn() => $httpClient->sendRequest($this->requests->capture()))
-            ->returns((new Response(200))->withBody($this->factory->createStream($json)));
+            ->returns((new Response($status))->withBody($this->factory->createStream($body)));
 
+        return $this->clientWith($httpClient, $apiKey);
+    }
+
+    private function clientWith(ClientInterface $httpClient, string $apiKey = 'test-key'): CentrifugoClient
+    {
         return new CentrifugoClient(
             httpClient: $httpClient,
             requestFactory: $this->factory,

@@ -17,6 +17,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   boolean literal arguments are passed by name (`json_decode(..., associative: true)`).
   Dev-dependency only; no behaviour change.
 
+- Fixed: `CentrifugoClient` no longer leaks non-package exceptions (#11). A
+  PSR-18 client failure, a non-2xx HTTP status (e.g. 401 for a wrong
+  `api_key`) or a body that is not a JSON object now throws the new
+  `CentrifugoTransportException` (`getStatusCode()`, original error as
+  `previous`) instead of `ClientExceptionInterface` / `JsonException`.
+  `CentrifugoApiException` and `CentrifugoTransportException` share the new
+  abstract base `CentrifugoException` (a `RuntimeException`, so existing
+  `catch (\RuntimeException)` blocks keep working).
+
 ## 1.0.0 — 2026-06-27
 
 - `CentrifugoClient`: PSR-18 HTTP client for the Centrifugo v6 server API (`publish`, `broadcast`, `subscribe`, `unsubscribe`, `disconnect`, `refresh`, `presence`, `presenceStats`, `history`, `historyRemove`, `channels`, `batch`).

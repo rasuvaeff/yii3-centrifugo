@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Rasuvaeff\Yii3Centrifugo;
 
+use Psr\Http\Client\ClientExceptionInterface;
 use Psr\Http\Client\ClientInterface;
 use Psr\Http\Message\RequestFactoryInterface;
 use Psr\Http\Message\StreamFactoryInterface;
@@ -146,10 +147,42 @@ final readonly class CentrifugoClient
             ->withHeader('Content-Type', 'application/json')
             ->withBody($this->streamFactory->createStream($body));
 
-        $response = $this->httpClient->sendRequest($request);
-        /** @var array{error?: array{code?: int, message?: string}, result?: array<string, mixed>} $result */
-        $result = json_decode((string) $response->getBody(), associative: true, depth: 512, flags: JSON_THROW_ON_ERROR);
+        try {
+            $response = $this->httpClient->sendRequest($request);
+        } catch (ClientExceptionInterface $e) {
+            throw new CentrifugoTransportException(
+                message: sprintf('Centrifugo API request "%s" failed: %s', $method, $e->getMessage()),
+                previous: $e,
+            );
+        }
 
+        $status = $response->getStatusCode();
+
+        if ($status < 200 || $status > 299) {
+            throw new CentrifugoTransportException(
+                message: sprintf('Centrifugo API request "%s" failed with HTTP %d', $method, $status),
+                statusCode: $status,
+            );
+        }
+
+        try {
+            $result = json_decode((string) $response->getBody(), associative: true, flags: JSON_THROW_ON_ERROR);
+        } catch (\JsonException $e) {
+            throw new CentrifugoTransportException(
+                message: sprintf('Centrifugo API request "%s" returned a body that is not valid JSON', $method),
+                statusCode: $status,
+                previous: $e,
+            );
+        }
+
+        if (!is_array($result)) {
+            throw new CentrifugoTransportException(
+                message: sprintf('Centrifugo API request "%s" returned a body that is not a JSON object', $method),
+                statusCode: $status,
+            );
+        }
+
+        /** @var array{error?: array{code?: int, message?: string}, result?: array<string, mixed>} $result */
         if (isset($result['error'])) {
             throw new CentrifugoApiException(
                 message: $result['error']['message'] ?? 'Unknown Centrifugo API error',
