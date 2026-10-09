@@ -39,6 +39,17 @@ composer require rasuvaeff/yii3-centrifugo
 ],
 ```
 
+Значения проверяются, когда контейнер собирает использующий их сервис; `InvalidConfigException` называет ключ params (но не значение):
+
+| Ключ | Правило | Проверяет |
+|---|---|---|
+| `api_url` | http(s) URL с хостом | `CentrifugoClient` |
+| `api_key` | строка; **пустая допустима** для Centrifugo с `api_insecure` (не делайте так в production) | `CentrifugoClient` |
+| `token_hmac_secret` | не короче 32 байт (HS256 нужен ключ 256 бит) | issuer'ы токенов |
+| `token_ttl` | целое > 0 | issuer'ы токенов |
+
+Приложению, которое только публикует, настраивать секрет токенов не нужно.
+
 ## Использование
 
 ### Клиент Server API

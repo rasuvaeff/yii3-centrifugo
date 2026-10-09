@@ -2,9 +2,6 @@
 
 declare(strict_types=1);
 
-use Lcobucci\JWT\Configuration;
-use Lcobucci\JWT\Signer\Hmac\Sha256;
-use Lcobucci\JWT\Signer\Key\InMemory;
 use Psr\Clock\ClockInterface;
 use Psr\Container\ContainerInterface;
 use Psr\Http\Client\ClientInterface;
@@ -13,6 +10,7 @@ use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\StreamFactoryInterface;
 use Rasuvaeff\Yii3Centrifugo\CentrifugoClient;
 use Rasuvaeff\Yii3Centrifugo\CentrifugoClientInterface;
+use Rasuvaeff\Yii3Centrifugo\Internal\Params;
 use Rasuvaeff\Yii3Centrifugo\Proxy\Action\ConnectAction;
 use Rasuvaeff\Yii3Centrifugo\Proxy\Action\PublishAction;
 use Rasuvaeff\Yii3Centrifugo\Proxy\Action\RefreshAction;
@@ -38,40 +36,26 @@ return [
         httpClient: $httpClient,
         requestFactory: $requestFactory,
         streamFactory: $streamFactory,
-        apiUrl: $params['centrifugo']['api_url'],
-        apiKey: $params['centrifugo']['api_key'],
+        apiUrl: Params::apiUrl($params),
+        apiKey: Params::apiKey($params),
     ),
 
     // alias: the interface and the class resolve to the same shared instance
     CentrifugoClientInterface::class => CentrifugoClient::class,
 
-    ConnectionTokenIssuer::class => static function (ContainerInterface $container) use ($params): ConnectionTokenIssuer {
-        $jwtConfig = Configuration::forSymmetricSigner(
-            new Sha256(),
-            InMemory::plainText($params['centrifugo']['token_hmac_secret']),
-        );
+    ConnectionTokenIssuer::class => static fn(ContainerInterface $container): ConnectionTokenIssuer => new ConnectionTokenIssuer(
+        jwtConfig: Params::jwtConfiguration($params),
+        defaultTtl: Params::tokenTtl($params),
+        // the application's PSR-20 clock when it binds one, else the system clock
+        clock: $container->has(ClockInterface::class) ? $container->get(ClockInterface::class) : null,
+    ),
 
-        return new ConnectionTokenIssuer(
-            jwtConfig: $jwtConfig,
-            defaultTtl: $params['centrifugo']['token_ttl'],
-            // the application's PSR-20 clock when it binds one, else the system clock
-            clock: $container->has(ClockInterface::class) ? $container->get(ClockInterface::class) : null,
-        );
-    },
-
-    SubscriptionTokenIssuer::class => static function (ContainerInterface $container) use ($params): SubscriptionTokenIssuer {
-        $jwtConfig = Configuration::forSymmetricSigner(
-            new Sha256(),
-            InMemory::plainText($params['centrifugo']['token_hmac_secret']),
-        );
-
-        return new SubscriptionTokenIssuer(
-            jwtConfig: $jwtConfig,
-            defaultTtl: $params['centrifugo']['token_ttl'],
-            // the application's PSR-20 clock when it binds one, else the system clock
-            clock: $container->has(ClockInterface::class) ? $container->get(ClockInterface::class) : null,
-        );
-    },
+    SubscriptionTokenIssuer::class => static fn(ContainerInterface $container): SubscriptionTokenIssuer => new SubscriptionTokenIssuer(
+        jwtConfig: Params::jwtConfiguration($params),
+        defaultTtl: Params::tokenTtl($params),
+        // the application's PSR-20 clock when it binds one, else the system clock
+        clock: $container->has(ClockInterface::class) ? $container->get(ClockInterface::class) : null,
+    ),
 
     ProxyResponseFactory::class => static fn(
         ResponseFactoryInterface $responseFactory,

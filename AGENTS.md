@@ -44,7 +44,7 @@ make release-check
 - **Proxy response is always HTTP 200.** Centrifugo reads `{"result":{}}`, `{"error":{"code":N,"message":"..."}}`, or `{"disconnect":{"code":N,"reason":"..."}}` from the body. HTTP 4xx/5xx are treated as hard failures by Centrifugo.
 - **Handler interfaces are NOT bound in `config/di.php`.** The application binds `ConnectProxyHandler::class => AppHandler::class`. Never add handler bindings to the package di.php — `ConfigWiringTest::diKeysDoNotOverlapHandlerInterfaces` enforces this.
 - **ProxyError code: 400–1999. ProxyDisconnect code: 4000–4999.** Validated in constructors.
-- **JWT secret min length.** `lcobucci/jwt` requires HMAC key to be non-empty. If params are misconfigured, the DI factory throws at instantiation time.
+- **Params are validated in `src/Internal/Params.php`, per consuming definition.** `config/di.php` only calls it (it is not covered by cs/psalm/testo). The client checks `api_url`/`api_key`, the issuers check `token_hmac_secret` (≥ 32 bytes) and `token_ttl` (> 0) — never validate a key in a definition that does not use it: the shipped defaults have an empty secret, and a publish-only app must still resolve the client. Empty `api_key` is valid (`api_insecure`). Messages name the key, never the value.
 - **PSR-18 client comes from the app.** `CentrifugoClient` is transport-agnostic; no guzzle/curl in `require`.
 - Code: `declare(strict_types=1)`, `final readonly class`, `#[\Override]`, explicit types.
 - `examples/` is part of the public contract: keep scripts runnable and update `examples/README.md` when example usage changes.
