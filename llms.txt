@@ -38,7 +38,9 @@ $client->info();
 $client->batch(
     new BatchCommand(method: 'publish', params: ['channel' => 'ch', 'data' => []]),
 );
-// Throws CentrifugoApiException on Centrifugo error response.
+// All failures extend CentrifugoException:
+//   CentrifugoApiException       — Centrifugo `error` reply, getApiCode()
+//   CentrifugoTransportException — PSR-18 failure, non-2xx (getStatusCode()), non-JSON body; previous kept
 ```
 
 ### Token Issuers

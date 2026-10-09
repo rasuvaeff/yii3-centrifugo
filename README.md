@@ -96,6 +96,25 @@ $client->batch(
 | `info()` | Cluster node info |
 | `batch(BatchCommand ...)` | Multiple commands in one request |
 
+#### Error handling
+
+Every failed call throws a subclass of `CentrifugoException`, so one `catch` covers "Centrifugo is unavailable or misconfigured":
+
+| Exception | When | Extra |
+|---|---|---|
+| `CentrifugoApiException` | Centrifugo answered with an `error` object | `getApiCode()` — Centrifugo error code |
+| `CentrifugoTransportException` | the PSR-18 client failed, the HTTP status is not 2xx (e.g. 401 for a wrong `api_key`), or the body is not a JSON object | `getStatusCode()` — HTTP status or `null`; `getPrevious()` — the original client / JSON error |
+
+```php
+use Rasuvaeff\Yii3Centrifugo\CentrifugoException;
+
+try {
+    $client->publish(channel: 'news', data: ['title' => 'Hello']);
+} catch (CentrifugoException $e) {
+    $logger->warning('Centrifugo publish failed', ['exception' => $e]);
+}
+```
+
 ### JWT Token Issuance
 
 ```php
@@ -205,7 +224,7 @@ return [
 
 - Proxy endpoints must be reachable only from the Centrifugo server (network ACL or shared secret header via `proxy.http_headers` config).
 - HMAC secret and API key are injected from params/env, never hard-coded.
-- `CentrifugoApiException` is thrown on Centrifugo API errors (non-zero `error` in response).
+- Server API failures surface as `CentrifugoException`: `CentrifugoApiException` for an `error` reply, `CentrifugoTransportException` for network errors, non-2xx statuses and non-JSON bodies. Exception messages never contain the API key.
 - `ProxyError` and `ProxyDisconnect` validate code ranges in constructors — invalid codes throw `InvalidArgumentException`.
 
 ## Examples

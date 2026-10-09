@@ -100,6 +100,25 @@ $client->batch(
 | `info()` | Информация об узле кластера |
 | `batch(BatchCommand ...)` | Несколько команд в одном запросе |
 
+#### Обработка ошибок
+
+Любой неудачный вызов бросает наследника `CentrifugoException`, так что один `catch` покрывает «Centrifugo недоступен или неверно настроен»:
+
+| Исключение | Когда | Дополнительно |
+|---|---|---|
+| `CentrifugoApiException` | Centrifugo ответил объектом `error` | `getApiCode()` — код ошибки Centrifugo |
+| `CentrifugoTransportException` | PSR-18 клиент упал, HTTP-статус не 2xx (например, 401 при неверном `api_key`) или тело не JSON-объект | `getStatusCode()` — HTTP-статус или `null`; `getPrevious()` — исходная ошибка клиента / JSON |
+
+```php
+use Rasuvaeff\Yii3Centrifugo\CentrifugoException;
+
+try {
+    $client->publish(channel: 'news', data: ['title' => 'Hello']);
+} catch (CentrifugoException $e) {
+    $logger->warning('Centrifugo publish failed', ['exception' => $e]);
+}
+```
+
 ### Выпуск JWT-токенов
 
 ```php
@@ -211,8 +230,9 @@ return [
 - Прокси-эндпоинты должны быть доступны только с сервера Centrifugo (сетевой ACL
   или общий секретный заголовок через конфигурацию `proxy.http_headers`).
 - HMAC-секрет и API-ключ приходят из params/env, а не захардкожены.
-- `CentrifugoApiException` выбрасывается при ошибках API Centrifugo (ненулевой
-  `error` в ответе).
+- Ошибки серверного API приходят как `CentrifugoException`: `CentrifugoApiException`
+  при ответе с `error`, `CentrifugoTransportException` при сетевой ошибке, статусе
+  не 2xx и теле не в JSON. В сообщениях исключений нет API-ключа.
 - `ProxyError` и `ProxyDisconnect` валидируют диапазоны кодов в конструкторах —
   недопустимые коды бросают `InvalidArgumentException`.
 
