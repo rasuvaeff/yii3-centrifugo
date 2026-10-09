@@ -354,6 +354,27 @@ return [
 - Server API failures surface as `CentrifugoException`: `CentrifugoApiException` for an `error` reply, `CentrifugoTransportException` for network errors, non-2xx statuses and non-JSON bodies. Exception messages never contain the API key.
 - `ProxyError` and `ProxyDisconnect` validate code ranges in constructors — invalid codes throw `InvalidArgumentException`.
 
+## Diagnostics: `centrifugo:doctor`
+
+With `yiisoft/yii-console` installed the command is registered automatically (config-plugin groups `params-console` / `di-console`); it needs `symfony/console`, which the package only suggests.
+
+```bash
+./yii centrifugo:doctor
+[pass] API params: http://centrifugo:8000
+[pass] token params: HS256 secret set, token_ttl 3600 s
+[FAIL] server API: Centrifugo API request "info" failed with HTTP 401
+[pass] connection token: issued and verified (HS256)
+```
+
+| Check | Category |
+|---|---|
+| API params (`api_url`, `api_key`) | config |
+| token params (`token_hmac_secret`, `token_ttl`) | config |
+| server API: `info()` — reachability and API key (skipped when API params are invalid) | upstream |
+| connection token: issued and verified with the configured secret | config |
+
+Exit codes are stable for scripts: `0` healthy, `2` config, `4` upstream — the category of the **first** failing check. Output never contains the API key or the secret. Without a console, use `Doctor\CentrifugoDoctor::diagnose()` directly (e.g. from a health check).
+
 ## Examples
 
 See [`examples/`](examples/) for runnable scripts.

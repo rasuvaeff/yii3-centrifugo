@@ -67,6 +67,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   action otherwise. Fail-closed: an empty secret is refused at construction.
   New params `proxy_secret` and `proxy_secret_header`; DI definition included.
   `psr/http-server-middleware` is now required.
+- Added the `centrifugo:doctor` console command (#18): checks API params,
+  token params, server API reachability and API key (`info()`), and a
+  connection-token round trip; prints one line per check and exits with 0
+  (healthy), 2 (config) or 4 (upstream). The logic lives in the
+  console-free `Doctor\CentrifugoDoctor`. `symfony/console` and
+  `yiisoft/yii-console` are suggestions only; the command is registered through
+  the `params-console` / `di-console` config-plugin groups.
 
 ## 1.0.0 — 2026-06-27
 

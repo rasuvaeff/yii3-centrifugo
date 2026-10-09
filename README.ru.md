@@ -364,6 +364,27 @@ return [
 - `ProxyError` и `ProxyDisconnect` валидируют диапазоны кодов в конструкторах —
   недопустимые коды бросают `InvalidArgumentException`.
 
+## Диагностика: `centrifugo:doctor`
+
+Если установлен `yiisoft/yii-console`, команда регистрируется автоматически (группы config-plugin `params-console` / `di-console`); ей нужен `symfony/console`, который пакет только предлагает (`suggest`).
+
+```bash
+./yii centrifugo:doctor
+[pass] API params: http://centrifugo:8000
+[pass] token params: HS256 secret set, token_ttl 3600 s
+[FAIL] server API: Centrifugo API request "info" failed with HTTP 401
+[pass] connection token: issued and verified (HS256)
+```
+
+| Проверка | Категория |
+|---|---|
+| API params (`api_url`, `api_key`) | config |
+| token params (`token_hmac_secret`, `token_ttl`) | config |
+| server API: `info()` — доступность и API-ключ (пропускается при неверных API params) | upstream |
+| connection token: выпуск и проверка подписи настроенным секретом | config |
+
+Коды выхода стабильны для скриптов: `0` — всё в порядке, `2` — конфигурация, `4` — upstream; это категория **первой** упавшей проверки. В выводе нет API-ключа и секрета. Без консоли используйте `Doctor\CentrifugoDoctor::diagnose()` напрямую (например, из health check).
+
 ## Примеры
 
 См. [`examples/`](examples/) — работоспособные скрипты.

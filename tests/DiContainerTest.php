@@ -18,6 +18,8 @@ use Rasuvaeff\Understudy\Arg;
 use Rasuvaeff\Understudy\Understudy;
 use Rasuvaeff\Yii3Centrifugo\CentrifugoClient;
 use Rasuvaeff\Yii3Centrifugo\CentrifugoClientInterface;
+use Rasuvaeff\Yii3Centrifugo\Console\CentrifugoDoctorCommand;
+use Rasuvaeff\Yii3Centrifugo\Doctor\CentrifugoDoctor;
 use Rasuvaeff\Yii3Centrifugo\InvalidConfigException;
 use Rasuvaeff\Yii3Centrifugo\Proxy\Internal\ProxyResponseFactory;
 use Rasuvaeff\Yii3Centrifugo\Proxy\ProxySecretMiddleware;
@@ -228,6 +230,28 @@ final class DiContainerTest
             $config = $e instanceof InvalidConfigException ? $e : $e->getPrevious();
             Assert::instanceOf($config, InvalidConfigException::class);
         }
+    }
+
+    public function consoleDefinitionsBuildTheDoctorCommand(): void
+    {
+        $params = [
+            'rasuvaeff/yii3-centrifugo' => [
+                'api_url' => 'https://centrifugo.test',
+                'api_key' => 'k',
+                'token_hmac_secret' => 'at-least-32-chars-secret-for-test',
+                'token_ttl' => 600,
+            ],
+        ];
+        /** @var array<string, mixed> $console */
+        $console = (static fn(array $params): array => require __DIR__ . '/../config/di-console.php')($params);
+        /** @var array{'yiisoft/yii-console': array{commands: array<string, class-string>}} $paramsConsole */
+        $paramsConsole = require __DIR__ . '/../config/params-console.php';
+
+        $container = $this->container(params: $params, extra: $console);
+        $command = $container->get($paramsConsole['yiisoft/yii-console']['commands']['centrifugo:doctor']);
+
+        Assert::instanceOf($command, CentrifugoDoctorCommand::class);
+        Assert::same($container->get(CentrifugoDoctor::class)->diagnose()->checks[0]->details, 'https://centrifugo.test');
     }
 
     public function clientResolvesWithThePackageDefaultParams(): void

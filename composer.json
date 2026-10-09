@@ -42,6 +42,7 @@
         "rasuvaeff/understudy-testo": "^1.0",
         "rector/rector": "^2.4",
         "roave/backward-compatibility-check": "^8.0",
+        "symfony/console": "^6.4 || ^7.0 || ^8.0",
         "testo/bridge-infection": "^0.1.6",
         "testo/testo": "^0.10.25",
         "vimeo/psalm": "^6.16",
@@ -49,6 +50,8 @@
     },
     "suggest": {
         "centrifugal/phpcent": "Official low-level Centrifugo HTTP API client (alternative to the bundled PSR-18 client)",
+        "symfony/console": "Required by the centrifugo:doctor console command",
+        "yiisoft/yii-console": "Registers centrifugo:doctor automatically (params-console)",
         "yiisoft/yii-runner-http": "Run Yii3 application over HTTP"
     },
     "autoload": {
@@ -76,7 +79,9 @@
     "extra": {
         "config-plugin": {
             "di": "di.php",
-            "params": "params.php"
+            "di-console": "di-console.php",
+            "params": "params.php",
+            "params-console": "params-console.php"
         },
         "config-plugin-options": {
             "source-directory": "config"
