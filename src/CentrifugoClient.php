@@ -148,7 +148,7 @@ final readonly class CentrifugoClient
 
         $response = $this->httpClient->sendRequest($request);
         /** @var array{error?: array{code?: int, message?: string}, result?: array<string, mixed>} $result */
-        $result = json_decode((string) $response->getBody(), true, 512, JSON_THROW_ON_ERROR);
+        $result = json_decode((string) $response->getBody(), associative: true, depth: 512, flags: JSON_THROW_ON_ERROR);
 
         if (isset($result['error'])) {
             throw new CentrifugoApiException(

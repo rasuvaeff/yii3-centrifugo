@@ -44,7 +44,7 @@ final class CentrifugoClientTest
 
         $client->publish(channel: 'news', data: ['title' => 'Hello']);
 
-        $body = json_decode((string) $this->requests->last()->getBody(), true);
+        $body = json_decode((string) $this->requests->last()->getBody(), associative: true);
         Assert::same($this->requests->last()->getUri()->getPath(), '/api/publish');
         Assert::same($body['channel'], 'news');
         Assert::same($body['data'], ['title' => 'Hello']);
@@ -55,7 +55,7 @@ final class CentrifugoClientTest
         $client = $this->makeClient(['result' => []]);
         $client->broadcast(channels: ['a', 'b'], data: ['x' => 1]);
 
-        $body = json_decode((string) $this->requests->last()->getBody(), true);
+        $body = json_decode((string) $this->requests->last()->getBody(), associative: true);
         Assert::same($body['channels'], ['a', 'b']);
         Assert::same($this->requests->last()->getUri()->getPath(), '/api/broadcast');
     }
@@ -75,7 +75,7 @@ final class CentrifugoClientTest
         $client = $this->makeClient(['result' => []]);
         $client->history(channel: 'news', limit: 10, reverse: true);
 
-        $body = json_decode((string) $this->requests->last()->getBody(), true);
+        $body = json_decode((string) $this->requests->last()->getBody(), associative: true);
         Assert::same($body['limit'], 10);
         Assert::true($body['reverse']);
     }
@@ -85,7 +85,7 @@ final class CentrifugoClientTest
         $client = $this->makeClient(['result' => []]);
         $client->channels(pattern: 'news*');
 
-        $body = json_decode((string) $this->requests->last()->getBody(), true);
+        $body = json_decode((string) $this->requests->last()->getBody(), associative: true);
         Assert::same($body['pattern'], 'news*');
     }
 
@@ -97,7 +97,7 @@ final class CentrifugoClientTest
             new BatchCommand(method: 'publish', params: ['channel' => 'b', 'data' => []]),
         );
 
-        $body = json_decode((string) $this->requests->last()->getBody(), true);
+        $body = json_decode((string) $this->requests->last()->getBody(), associative: true);
         Assert::same($this->requests->last()->getUri()->getPath(), '/api/batch');
         Assert::count($body['commands'], 2);
         Assert::array($body['commands'][0])->hasKeys('publish');
@@ -140,7 +140,7 @@ final class CentrifugoClientTest
         $client = $this->makeClient(['result' => []]);
         $client->disconnect(user: '42', client: 'client-id');
 
-        $body = json_decode((string) $this->requests->last()->getBody(), true);
+        $body = json_decode((string) $this->requests->last()->getBody(), associative: true);
         Assert::same($body['client'], 'client-id');
     }
 
@@ -149,7 +149,7 @@ final class CentrifugoClientTest
         $client = $this->makeClient(['result' => []]);
         $client->subscribe(user: '42', channel: 'news');
 
-        $body = json_decode((string) $this->requests->last()->getBody(), true);
+        $body = json_decode((string) $this->requests->last()->getBody(), associative: true);
         Assert::same($this->requests->last()->getUri()->getPath(), '/api/subscribe');
         Assert::same($body['user'], '42');
         Assert::same($body['channel'], 'news');
@@ -160,7 +160,7 @@ final class CentrifugoClientTest
         $client = $this->makeClient(['result' => []]);
         $client->unsubscribe(user: '42', channel: 'news');
 
-        $body = json_decode((string) $this->requests->last()->getBody(), true);
+        $body = json_decode((string) $this->requests->last()->getBody(), associative: true);
         Assert::same($this->requests->last()->getUri()->getPath(), '/api/unsubscribe');
         Assert::same($body['user'], '42');
         Assert::same($body['channel'], 'news');
@@ -171,7 +171,7 @@ final class CentrifugoClientTest
         $client = $this->makeClient(['result' => []]);
         $client->refresh(user: '42');
 
-        $body = json_decode((string) $this->requests->last()->getBody(), true);
+        $body = json_decode((string) $this->requests->last()->getBody(), associative: true);
         Assert::same($this->requests->last()->getUri()->getPath(), '/api/refresh');
         Assert::same($body['user'], '42');
         Assert::array($body)->doesNotHaveKeys('client');
@@ -183,7 +183,7 @@ final class CentrifugoClientTest
         $client = $this->makeClient(['result' => []]);
         $client->refresh(user: '42', client: 'c1');
 
-        $body = json_decode((string) $this->requests->last()->getBody(), true);
+        $body = json_decode((string) $this->requests->last()->getBody(), associative: true);
         Assert::same($body['client'], 'c1');
     }
 
@@ -192,7 +192,7 @@ final class CentrifugoClientTest
         $client = $this->makeClient(['result' => []]);
         $client->refresh(user: '42', expireAt: 9999999);
 
-        $body = json_decode((string) $this->requests->last()->getBody(), true);
+        $body = json_decode((string) $this->requests->last()->getBody(), associative: true);
         Assert::same($body['expire_at'], 9999999);
     }
 
@@ -201,7 +201,7 @@ final class CentrifugoClientTest
         $client = $this->makeClient(['result' => []]);
         $client->presenceStats(channel: 'news');
 
-        $body = json_decode((string) $this->requests->last()->getBody(), true);
+        $body = json_decode((string) $this->requests->last()->getBody(), associative: true);
         Assert::same($this->requests->last()->getUri()->getPath(), '/api/presence_stats');
         Assert::same($body['channel'], 'news');
     }
@@ -211,7 +211,7 @@ final class CentrifugoClientTest
         $client = $this->makeClient(['result' => []]);
         $client->historyRemove(channel: 'news');
 
-        $body = json_decode((string) $this->requests->last()->getBody(), true);
+        $body = json_decode((string) $this->requests->last()->getBody(), associative: true);
         Assert::same($this->requests->last()->getUri()->getPath(), '/api/history_remove');
         Assert::same($body['channel'], 'news');
     }
@@ -222,7 +222,7 @@ final class CentrifugoClientTest
         $since = ['offset' => 5, 'epoch' => 'abc'];
         $client->history(channel: 'news', since: $since);
 
-        $body = json_decode((string) $this->requests->last()->getBody(), true);
+        $body = json_decode((string) $this->requests->last()->getBody(), associative: true);
         Assert::same($body['since'], $since);
     }
 
@@ -231,7 +231,7 @@ final class CentrifugoClientTest
         $client = $this->makeClient(['result' => []]);
         $client->disconnect(user: '42', whitelist: true);
 
-        $body = json_decode((string) $this->requests->last()->getBody(), true);
+        $body = json_decode((string) $this->requests->last()->getBody(), associative: true);
         Assert::true($body['whitelist']);
     }
 

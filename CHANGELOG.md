@@ -13,6 +13,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   handler doubles in the Action tests, and the never-called client in
   `ConfigWiringTest`, which is now a strict double that fails on any HTTP
   call. Dev-dependency only; the public contract is untouched.
+- Rector runs `rasuvaeff/rector-named-literals` (`AddNameToLiteralArgumentRector`):
+  boolean literal arguments are passed by name (`json_decode(..., associative: true)`).
+  Dev-dependency only; no behaviour change.
 
 ## 1.0.0 — 2026-06-27
 

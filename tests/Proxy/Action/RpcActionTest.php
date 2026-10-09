@@ -68,7 +68,7 @@ final class RpcActionTest
         $action = new RpcAction(handler: $handler, responseFactory: $this->responseFactory);
         $response = $action->handle($this->makeRequest([]));
 
-        $body = json_decode((string) $response->getBody(), true);
+        $body = json_decode((string) $response->getBody(), associative: true);
         Assert::same($body['result']['value'], 42);
     }
 
