@@ -23,6 +23,7 @@ use Rasuvaeff\Yii3Centrifugo\Proxy\Handler\RpcProxyHandler;
 use Rasuvaeff\Yii3Centrifugo\Proxy\Handler\SubRefreshProxyHandler;
 use Rasuvaeff\Yii3Centrifugo\Proxy\Handler\SubscribeProxyHandler;
 use Rasuvaeff\Yii3Centrifugo\Proxy\Internal\ProxyResponseFactory;
+use Rasuvaeff\Yii3Centrifugo\Proxy\ProxySecretMiddleware;
 use Rasuvaeff\Yii3Centrifugo\Token\ConnectionTokenIssuer;
 use Rasuvaeff\Yii3Centrifugo\Token\SubscriptionTokenIssuer;
 
@@ -54,6 +55,13 @@ return [
         defaultTtl: Params::tokenTtl($params),
         // the application's PSR-20 clock when it binds one, else the system clock
         clock: $container->has(ClockInterface::class) ? $container->get(ClockInterface::class) : null,
+    ),
+
+    // resolving it without params `proxy_secret` fails: the middleware is fail-closed
+    ProxySecretMiddleware::class => static fn(ResponseFactoryInterface $responseFactory): ProxySecretMiddleware => new ProxySecretMiddleware(
+        responseFactory: $responseFactory,
+        secret: Params::proxySecret($params),
+        header: Params::proxySecretHeader($params),
     ),
 
     ProxyResponseFactory::class => static fn(

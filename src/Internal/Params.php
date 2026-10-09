@@ -10,6 +10,7 @@ use Lcobucci\JWT\Signer\Key\InMemory;
 use Psr\Container\ContainerInterface;
 use Psr\Http\Client\ClientInterface;
 use Rasuvaeff\Yii3Centrifugo\InvalidConfigException;
+use Rasuvaeff\Yii3Centrifugo\Proxy\ProxySecretMiddleware;
 
 /**
  * Reads and validates the package params for the DI definitions. Each value
@@ -79,6 +80,38 @@ final readonly class Params
         }
 
         return $client;
+    }
+
+    /**
+     * @param array<array-key, mixed> $params
+     *
+     * @return non-empty-string
+     */
+    public static function proxySecret(array $params): string
+    {
+        $secret = self::value($params, 'proxy_secret');
+
+        if (!is_string($secret) || $secret === '') {
+            throw new InvalidConfigException(self::path($params, 'proxy_secret') . ' must be a non-empty string');
+        }
+
+        return $secret;
+    }
+
+    /**
+     * @param array<array-key, mixed> $params
+     *
+     * @return non-empty-string
+     */
+    public static function proxySecretHeader(array $params): string
+    {
+        $header = self::value($params, 'proxy_secret_header') ?? ProxySecretMiddleware::DEFAULT_HEADER;
+
+        if (!is_string($header) || $header === '') {
+            throw new InvalidConfigException(self::path($params, 'proxy_secret_header') . ' must be a non-empty string');
+        }
+
+        return $header;
     }
 
     /**

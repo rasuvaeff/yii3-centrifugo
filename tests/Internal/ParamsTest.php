@@ -248,6 +248,47 @@ final class ParamsTest
         Assert::same(Params::tokenTtl(['rasuvaeff/yii3-centrifugo' => ['token_ttl' => 60], 'centrifugo' => 'oops']), 60);
     }
 
+    public function proxySecretIsRequired(): void
+    {
+        Assert::same(Params::proxySecret($this->params(proxy_secret: 's')), 's');
+
+        Expect::exception(InvalidConfigException::class)
+            ->withMessage("params['rasuvaeff/yii3-centrifugo']['proxy_secret'] must be a non-empty string");
+
+        Params::proxySecret($this->params(proxy_secret: ''));
+    }
+
+    public function nonStringProxySecretIsRejected(): void
+    {
+        Expect::exception(InvalidConfigException::class);
+
+        Params::proxySecret($this->params(proxy_secret: 1));
+    }
+
+    public function proxySecretHeaderDefaultsToTheMiddlewareDefault(): void
+    {
+        Assert::same(Params::proxySecretHeader($this->params()), 'X-Centrifugo-Proxy-Secret');
+        Assert::same(Params::proxySecretHeader($this->params(proxy_secret_header: 'X-S')), 'X-S');
+    }
+
+    /**
+     * @return iterable<string, array{mixed}>
+     */
+    public static function invalidHeaders(): iterable
+    {
+        yield 'empty' => [''];
+        yield 'not a string' => [1];
+    }
+
+    #[DataProvider('invalidHeaders')]
+    public function invalidProxySecretHeaderIsRejected(mixed $header): void
+    {
+        Expect::exception(InvalidConfigException::class)
+            ->withMessage("params['rasuvaeff/yii3-centrifugo']['proxy_secret_header'] must be a non-empty string");
+
+        Params::proxySecretHeader($this->params(proxy_secret_header: $header));
+    }
+
     /**
      * @return array<string, mixed>
      */
