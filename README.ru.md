@@ -31,13 +31,15 @@ composer require rasuvaeff/yii3-centrifugo
 Затем настройте в `config/params.php`:
 
 ```php
-'centrifugo' => [
+'rasuvaeff/yii3-centrifugo' => [
     'api_url'            => 'http://localhost:8000',
     'api_key'            => 'your-api-key',
     'token_hmac_secret'  => 'your-hmac-secret-at-least-32-chars',
     'token_ttl'          => 3600,
 ],
 ```
+
+До 1.0 params жили под ключом `'centrifugo'`. Он по-прежнему читается (deprecated, удаление в 2.0): каждое заданное в нём значение перекрывает то же значение под `'rasuvaeff/yii3-centrifugo'`, так что существующие приложения работают без изменений. Для миграции переименуйте ключ в своих params и **удалите** старый — пока он есть, он побеждает.
 
 Значения проверяются, когда контейнер собирает использующий их сервис; `InvalidConfigException` называет ключ params (но не значение):
 
@@ -65,7 +67,7 @@ return [
 ];
 
 // config/common/params.php
-'centrifugo' => [
+'rasuvaeff/yii3-centrifugo' => [
     // ...
     'http_client' => 'centrifugo.http',
 ],

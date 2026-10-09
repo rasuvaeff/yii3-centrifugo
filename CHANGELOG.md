@@ -54,6 +54,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `CentrifugoClient` uses, `Psr\Http\Client\ClientInterface::class` by
   default. Point it at a dedicated client with its own timeouts; an id that
   does not resolve to a PSR-18 client throws `InvalidConfigException`.
+- Params moved to the vendor/package key `params['rasuvaeff/yii3-centrifugo']`
+  (#17), consistent with other `rasuvaeff/*` packages. The legacy
+  `params['centrifugo']` key is deprecated (removed in 2.0) but still read:
+  each value it sets overrides the same value under the new key, so an
+  application that overrides only the old key keeps its settings while the
+  package defaults under the new key fill the rest. Validation messages name
+  the key the value came from.
 
 ## 1.0.0 — 2026-06-27
 

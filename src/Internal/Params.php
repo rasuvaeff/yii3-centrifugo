@@ -20,7 +20,10 @@ use Rasuvaeff\Yii3Centrifugo\InvalidConfigException;
  */
 final readonly class Params
 {
-    public const string KEY = 'centrifugo';
+    public const string KEY = 'rasuvaeff/yii3-centrifugo';
+
+    // deprecated since 1.1, removed in 2.0: read only as a fallback
+    public const string LEGACY_KEY = 'centrifugo';
 
     /** HS256 needs a key of at least 256 bits. */
     public const int MIN_SECRET_BYTES = 32;
@@ -33,7 +36,7 @@ final readonly class Params
         $url = self::value($params, 'api_url');
 
         if (!is_string($url)) {
-            throw new InvalidConfigException(self::path('api_url') . ' must be an http(s) URL');
+            throw new InvalidConfigException(self::path($params, 'api_url') . ' must be an http(s) URL');
         }
 
         $parts = parse_url($url);
@@ -43,7 +46,7 @@ final readonly class Params
             !in_array(strtolower($parts['scheme'] ?? ''), ['http', 'https'], strict: true)
             || ($parts['host'] ?? '') === ''
         ) {
-            throw new InvalidConfigException(self::path('api_url') . ' must be an http(s) URL');
+            throw new InvalidConfigException(self::path($params, 'api_url') . ' must be an http(s) URL');
         }
 
         return $url;
@@ -60,7 +63,7 @@ final readonly class Params
         $id = self::value($params, 'http_client') ?? ClientInterface::class;
 
         if (!is_string($id) || $id === '') {
-            throw new InvalidConfigException(self::path('http_client') . ' must be a container id');
+            throw new InvalidConfigException(self::path($params, 'http_client') . ' must be a container id');
         }
 
         $client = $container->get($id);
@@ -68,7 +71,7 @@ final readonly class Params
         if (!$client instanceof ClientInterface) {
             throw new InvalidConfigException(sprintf(
                 '%s must name a %s service, "%s" resolves to %s',
-                self::path('http_client'),
+                self::path($params, 'http_client'),
                 ClientInterface::class,
                 $id,
                 get_debug_type($client),
@@ -88,7 +91,7 @@ final readonly class Params
         $key = self::value($params, 'api_key') ?? '';
 
         if (!is_string($key)) {
-            throw new InvalidConfigException(self::path('api_key') . ' must be a string');
+            throw new InvalidConfigException(self::path($params, 'api_key') . ' must be a string');
         }
 
         return $key;
@@ -104,7 +107,7 @@ final readonly class Params
         if (!is_string($secret) || strlen($secret) < self::MIN_SECRET_BYTES) {
             throw new InvalidConfigException(sprintf(
                 '%s must be a string of at least %d bytes',
-                self::path('token_hmac_secret'),
+                self::path($params, 'token_hmac_secret'),
                 self::MIN_SECRET_BYTES,
             ));
         }
@@ -123,22 +126,47 @@ final readonly class Params
         $ttl = self::value($params, 'token_ttl');
 
         if (!is_int($ttl) || $ttl < 1) {
-            throw new InvalidConfigException(self::path('token_ttl') . ' must be a positive integer');
+            throw new InvalidConfigException(self::path($params, 'token_ttl') . ' must be a positive integer');
         }
 
         return $ttl;
     }
 
     /**
+     * The legacy `centrifugo` section, when the application still sets it,
+     * overrides the package defaults that yiisoft/config always merges in
+     * under the new key; otherwise the new key alone is read.
+     *
      * @param array<array-key, mixed> $params
      */
     private static function value(array $params, string $name): mixed
     {
-        return is_array($params[self::KEY] ?? null) ? $params[self::KEY][$name] ?? null : null;
+        $legacy = self::section($params, self::LEGACY_KEY);
+
+        return array_key_exists($name, $legacy) ? $legacy[$name] : self::section($params, self::KEY)[$name] ?? null;
     }
 
-    private static function path(string $name): string
+    /**
+     * @param array<array-key, mixed> $params
+     */
+    private static function path(array $params, string $name): string
     {
-        return sprintf("params['%s']['%s']", self::KEY, $name);
+        $key = array_key_exists($name, self::section($params, self::LEGACY_KEY)) ? self::LEGACY_KEY : self::KEY;
+
+        return sprintf("params['%s']['%s']", $key, $name);
+    }
+
+    /**
+     * @param array<array-key, mixed> $params
+     *
+     * @return array<array-key, mixed>
+     */
+    private static function section(array $params, string $key): array
+    {
+        if (!isset($params[$key]) || !is_array($params[$key])) {
+            return [];
+        }
+
+        return $params[$key];
     }
 }

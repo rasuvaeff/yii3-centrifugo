@@ -55,8 +55,8 @@ final class ConfigWiringTest
             httpClient: $httpClient,
             requestFactory: $factory,
             streamFactory: $factory,
-            apiUrl: $params['centrifugo']['api_url'],
-            apiKey: $params['centrifugo']['api_key'],
+            apiUrl: $params['rasuvaeff/yii3-centrifugo']['api_url'],
+            apiKey: $params['rasuvaeff/yii3-centrifugo']['api_key'],
         );
 
         Assert::instanceOf($client, CentrifugoClient::class);
@@ -72,7 +72,7 @@ final class ConfigWiringTest
 
         $issuer = new ConnectionTokenIssuer(
             jwtConfig: $jwtConfig,
-            defaultTtl: $params['centrifugo']['token_ttl'],
+            defaultTtl: $params['rasuvaeff/yii3-centrifugo']['token_ttl'],
         );
 
         Assert::instanceOf($issuer, ConnectionTokenIssuer::class);
@@ -88,7 +88,7 @@ final class ConfigWiringTest
 
         $issuer = new SubscriptionTokenIssuer(
             jwtConfig: $jwtConfig,
-            defaultTtl: $params['centrifugo']['token_ttl'],
+            defaultTtl: $params['rasuvaeff/yii3-centrifugo']['token_ttl'],
         );
 
         Assert::instanceOf($issuer, SubscriptionTokenIssuer::class);

@@ -13,7 +13,7 @@ composer require rasuvaeff/yii3-centrifugo
 - Targets Centrifugo **v6** only. Wire format changed between majors — do not assume v3/v4/v5 compatibility.
 - All proxy responses must be HTTP 200 with JSON `{"result":{}}`, `{"error":{"code":N,"message":"..."}}` (400–1999), or `{"disconnect":{"code":N,"reason":"..."}}` (4000–4999).
 - Handler interfaces are **NOT** bound in package `config/di.php` — the application must bind them.
-- API key and HMAC secret come from `params['centrifugo']` — never hard-coded.
+- API key and HMAC secret come from `params['rasuvaeff/yii3-centrifugo']` — never hard-coded. The legacy `params['centrifugo']` key is still read and overrides the new one per value (deprecated, removed in 2.0).
 - PSR-18 HTTP client and PSR-17 factories must be bound by the application.
 
 ## API Reference
@@ -157,7 +157,7 @@ return [
 
 ```php
 // config/params.php
-'centrifugo' => [
+'rasuvaeff/yii3-centrifugo' => [
     'api_url'           => 'http://centrifugo:8000',
     'api_key'           => 'secret',
     'token_hmac_secret' => 'at-least-32-chars',
