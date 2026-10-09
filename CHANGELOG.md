@@ -25,6 +25,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `CentrifugoApiException` and `CentrifugoTransportException` share the new
   abstract base `CentrifugoException` (a `RuntimeException`, so existing
   `catch (\RuntimeException)` blocks keep working).
+- Added `CentrifugoClientInterface` with every public method of
+  `CentrifugoClient`, which now implements it (#10). `config/di.php` aliases
+  the interface to the same shared `CentrifugoClient` instance; the class stays
+  resolvable.
+- Added `Testing\InMemoryCentrifugoClient`, an in-memory test double
+  (`calls()`, `published()`, `publishedTo()`, `failNextWith()`, `reset()`), and
+  `examples/testing.php`.
 
 ## 1.0.0 — 2026-06-27
 

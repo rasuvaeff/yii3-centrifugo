@@ -10,6 +10,7 @@ use Psr\Http\Message\RequestFactoryInterface;
 use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\StreamFactoryInterface;
 use Rasuvaeff\Yii3Centrifugo\CentrifugoClient;
+use Rasuvaeff\Yii3Centrifugo\CentrifugoClientInterface;
 use Rasuvaeff\Yii3Centrifugo\Proxy\Action\ConnectAction;
 use Rasuvaeff\Yii3Centrifugo\Proxy\Action\PublishAction;
 use Rasuvaeff\Yii3Centrifugo\Proxy\Action\RefreshAction;
@@ -38,6 +39,9 @@ return [
         apiUrl: $params['centrifugo']['api_url'],
         apiKey: $params['centrifugo']['api_key'],
     ),
+
+    // alias: the interface and the class resolve to the same shared instance
+    CentrifugoClientInterface::class => CentrifugoClient::class,
 
     ConnectionTokenIssuer::class => static function () use ($params): ConnectionTokenIssuer {
         $jwtConfig = Configuration::forSymmetricSigner(
