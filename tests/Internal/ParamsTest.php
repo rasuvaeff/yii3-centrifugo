@@ -61,7 +61,7 @@ final class ParamsTest
     public function nonHttpUrlsAreRejected(mixed $url): void
     {
         Expect::exception(InvalidConfigException::class)
-            ->withMessage("params['centrifugo']['api_url'] must be an http(s) URL");
+            ->withMessage("params['rasuvaeff/yii3-centrifugo']['api_url'] must be an http(s) URL");
 
         Params::apiUrl($this->params(api_url: $url));
     }
@@ -69,7 +69,7 @@ final class ParamsTest
     public function missingSectionIsReportedByKey(): void
     {
         Expect::exception(InvalidConfigException::class)
-            ->withMessage("params['centrifugo']['api_url'] must be an http(s) URL");
+            ->withMessage("params['rasuvaeff/yii3-centrifugo']['api_url'] must be an http(s) URL");
 
         Params::apiUrl([]);
     }
@@ -77,9 +77,9 @@ final class ParamsTest
     public function nonArraySectionIsReportedByKey(): void
     {
         Expect::exception(InvalidConfigException::class)
-            ->withMessage("params['centrifugo']['token_ttl'] must be a positive integer");
+            ->withMessage("params['rasuvaeff/yii3-centrifugo']['token_ttl'] must be a positive integer");
 
-        Params::tokenTtl(['centrifugo' => 'oops']);
+        Params::tokenTtl(['rasuvaeff/yii3-centrifugo' => 'oops']);
     }
 
     public function emptyApiKeyIsAllowedForApiInsecure(): void
@@ -92,7 +92,7 @@ final class ParamsTest
     public function nonStringApiKeyIsRejected(): void
     {
         Expect::exception(InvalidConfigException::class)
-            ->withMessage("params['centrifugo']['api_key'] must be a string");
+            ->withMessage("params['rasuvaeff/yii3-centrifugo']['api_key'] must be a string");
 
         Params::apiKey($this->params(api_key: 123));
     }
@@ -108,7 +108,7 @@ final class ParamsTest
     public function nonStringSecretIsRejected(): void
     {
         Expect::exception(InvalidConfigException::class)
-            ->withMessage("params['centrifugo']['token_hmac_secret'] must be a string of at least 32 bytes");
+            ->withMessage("params['rasuvaeff/yii3-centrifugo']['token_hmac_secret'] must be a string of at least 32 bytes");
 
         Params::jwtConfiguration($this->params(token_hmac_secret: null));
     }
@@ -129,7 +129,7 @@ final class ParamsTest
             Assert::true($long);
         } catch (InvalidConfigException $e) {
             Assert::false($long);
-            Assert::same($e->getMessage(), "params['centrifugo']['token_hmac_secret'] must be a string of at least 32 bytes");
+            Assert::same($e->getMessage(), "params['rasuvaeff/yii3-centrifugo']['token_hmac_secret'] must be a string of at least 32 bytes");
         }
     }
 
@@ -152,7 +152,7 @@ final class ParamsTest
             Assert::true($ttl > 0);
         } catch (InvalidConfigException $e) {
             Assert::true($ttl <= 0);
-            Assert::same($e->getMessage(), "params['centrifugo']['token_ttl'] must be a positive integer");
+            Assert::same($e->getMessage(), "params['rasuvaeff/yii3-centrifugo']['token_ttl'] must be a positive integer");
         }
     }
 
@@ -202,7 +202,7 @@ final class ParamsTest
     public function invalidHttpClientIdIsRejected(mixed $id): void
     {
         Expect::exception(InvalidConfigException::class)
-            ->withMessage("params['centrifugo']['http_client'] must be a container id");
+            ->withMessage("params['rasuvaeff/yii3-centrifugo']['http_client'] must be a container id");
 
         Params::httpClient($this->params(http_client: $id), Understudy::strict(Understudy::for(ContainerInterface::class)));
     }
@@ -213,10 +213,39 @@ final class ParamsTest
         when(fn() => $container->get('logger'))->returns(new \stdClass());
 
         Expect::exception(InvalidConfigException::class)->withMessage(
-            "params['centrifugo']['http_client'] must name a Psr\\Http\\Client\\ClientInterface service, \"logger\" resolves to stdClass",
+            "params['rasuvaeff/yii3-centrifugo']['http_client'] must name a Psr\\Http\\Client\\ClientInterface service, \"logger\" resolves to stdClass",
         );
 
         Params::httpClient($this->params(http_client: 'logger'), $container);
+    }
+
+    public function legacyKeyWinsOverTheNewKeyPerValue(): void
+    {
+        $params = [
+            'rasuvaeff/yii3-centrifugo' => ['api_url' => 'http://new.test', 'token_ttl' => 60],
+            'centrifugo' => ['api_url' => 'http://legacy.test'],
+        ];
+
+        Assert::same(Params::apiUrl($params), 'http://legacy.test');
+        Assert::same(Params::tokenTtl($params), 60);
+    }
+
+    public function legacyKeyAloneIsRead(): void
+    {
+        Assert::same(Params::apiKey(['centrifugo' => ['api_key' => 'k']]), 'k');
+    }
+
+    public function errorsNameTheKeyTheValueCameFrom(): void
+    {
+        Expect::exception(InvalidConfigException::class)
+            ->withMessage("params['centrifugo']['token_ttl'] must be a positive integer");
+
+        Params::tokenTtl(['rasuvaeff/yii3-centrifugo' => ['token_ttl' => 60], 'centrifugo' => ['token_ttl' => 0]]);
+    }
+
+    public function nonArrayLegacySectionIsIgnored(): void
+    {
+        Assert::same(Params::tokenTtl(['rasuvaeff/yii3-centrifugo' => ['token_ttl' => 60], 'centrifugo' => 'oops']), 60);
     }
 
     /**
@@ -224,6 +253,6 @@ final class ParamsTest
      */
     private function params(mixed ...$values): array
     {
-        return ['centrifugo' => $values];
+        return ['rasuvaeff/yii3-centrifugo' => $values];
     }
 }

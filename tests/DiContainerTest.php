@@ -162,12 +162,43 @@ final class DiContainerTest
 
         $container = $this->container(
             httpClient: $global,
-            params: ['centrifugo' => ['api_url' => 'https://centrifugo.test', 'http_client' => 'centrifugo.http']],
+            params: ['rasuvaeff/yii3-centrifugo' => ['api_url' => 'https://centrifugo.test', 'http_client' => 'centrifugo.http']],
             extra: ['centrifugo.http' => $dedicated],
         );
         $container->get(CentrifugoClient::class)->info();
 
         Assert::count($requests->all(), 1);
+    }
+
+    /**
+     * yiisoft/config always merges the package defaults under the new key, so
+     * an application that still overrides only the legacy `centrifugo` key
+     * must get its own values, not the defaults (localhost, empty key).
+     */
+    public function legacyKeyOverridesThePackageDefaultsUnderTheNewKey(): void
+    {
+        $requests = Arg::captor(RequestInterface::class);
+        $httpClient = Understudy::for(ClientInterface::class);
+        $psr17 = new Psr17Factory();
+        when(fn() => $httpClient->sendRequest($requests->capture()))
+            ->returns($psr17->createResponse()->withBody($psr17->createStream('{"result":{}}')));
+
+        $params = require __DIR__ . '/../config/params.php';
+        $params['centrifugo'] = [
+            'api_url' => 'https://legacy.test',
+            'api_key' => 'legacy-key',
+            'token_hmac_secret' => 'legacy-secret-at-least-32-bytes-long',
+        ];
+        $container = $this->container(httpClient: $httpClient, params: $params);
+
+        $container->get(CentrifugoClient::class)->info();
+        $jwt = $container->get(ConnectionTokenIssuer::class)->issue(userId: '42');
+
+        Assert::same((string) $requests->last()->getUri(), 'https://legacy.test/api/info');
+        Assert::same($requests->last()->getHeaderLine('X-API-Key'), 'legacy-key');
+        // token_ttl is not in the legacy section: the package default applies
+        $before = time();
+        Assert::true($this->expiry($jwt) >= $before + 3600 - 1 && $this->expiry($jwt) <= time() + 3600);
     }
 
     public function clientResolvesWithThePackageDefaultParams(): void
@@ -191,19 +222,19 @@ final class DiContainerTest
         } catch (\Throwable $e) {
             $config = $e instanceof InvalidConfigException ? $e : $e->getPrevious();
             Assert::instanceOf($config, InvalidConfigException::class);
-            Assert::string($config->getMessage())->contains("params['centrifugo']['token_hmac_secret']");
+            Assert::string($config->getMessage())->contains("params['rasuvaeff/yii3-centrifugo']['token_hmac_secret']");
         }
     }
 
     public function clientWithAnInvalidUrlFailsNamingTheParamsKey(): void
     {
         try {
-            $this->container(params: ['centrifugo' => ['api_url' => 'centrifugo:8000']])->get(CentrifugoClient::class);
+            $this->container(params: ['rasuvaeff/yii3-centrifugo' => ['api_url' => 'centrifugo:8000']])->get(CentrifugoClient::class);
             Assert::fail('Expected InvalidConfigException');
         } catch (\Throwable $e) {
             $config = $e instanceof InvalidConfigException ? $e : $e->getPrevious();
             Assert::instanceOf($config, InvalidConfigException::class);
-            Assert::string($config->getMessage())->contains("params['centrifugo']['api_url']");
+            Assert::string($config->getMessage())->contains("params['rasuvaeff/yii3-centrifugo']['api_url']");
         }
     }
 
@@ -220,7 +251,7 @@ final class DiContainerTest
         array $extra = [],
     ): Container {
         $params ??= [
-            'centrifugo' => [
+            'rasuvaeff/yii3-centrifugo' => [
                 'api_url' => 'https://centrifugo.test',
                 'api_key' => 'params-api-key',
                 'token_hmac_secret' => 'at-least-32-chars-secret-for-test',

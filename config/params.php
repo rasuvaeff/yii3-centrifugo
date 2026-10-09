@@ -5,7 +5,9 @@ declare(strict_types=1);
 use Psr\Http\Client\ClientInterface;
 
 return [
-    'centrifugo' => [
+    // the legacy top-level 'centrifugo' key is still read as a fallback
+    // (deprecated, removed in 2.0)
+    'rasuvaeff/yii3-centrifugo' => [
         'api_url' => 'http://localhost:8000',
         'api_key' => '',
         'token_hmac_secret' => '',

@@ -28,13 +28,15 @@ composer require rasuvaeff/yii3-centrifugo
 Then configure in `config/params.php`:
 
 ```php
-'centrifugo' => [
+'rasuvaeff/yii3-centrifugo' => [
     'api_url'            => 'http://localhost:8000',
     'api_key'            => 'your-api-key',
     'token_hmac_secret'  => 'your-hmac-secret-at-least-32-chars',
     'token_ttl'          => 3600,
 ],
 ```
+
+Up to 1.0 the params lived under `'centrifugo'`. That key is still read (deprecated, removed in 2.0): every value it sets overrides the same value under `'rasuvaeff/yii3-centrifugo'`, so existing applications keep working unchanged. To migrate, rename the key in your params and **remove** the old one — while it is present it wins.
 
 Values are validated when the container builds the service that uses them, and an `InvalidConfigException` names the params key (never the value):
 
@@ -62,7 +64,7 @@ return [
 ];
 
 // config/common/params.php
-'centrifugo' => [
+'rasuvaeff/yii3-centrifugo' => [
     // ...
     'http_client' => 'centrifugo.http',
 ],
