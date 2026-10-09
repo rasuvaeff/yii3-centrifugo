@@ -4,7 +4,11 @@ declare(strict_types=1);
 
 namespace Rasuvaeff\Yii3Centrifugo\Tests;
 
+use Lcobucci\JWT\Encoding\JoseEncoder;
+use Lcobucci\JWT\Token\Parser;
+use Lcobucci\JWT\UnencryptedToken;
 use Nyholm\Psr7\Factory\Psr17Factory;
+use Psr\Clock\ClockInterface;
 use Psr\Http\Client\ClientInterface;
 use Psr\Http\Message\RequestFactoryInterface;
 use Psr\Http\Message\RequestInterface;
@@ -100,7 +104,53 @@ final class DiContainerTest
         Assert::same(substr_count($jwt, '.'), expected: 2);
     }
 
-    private function container(?ClientInterface $httpClient = null): Container
+    /**
+     * @return iterable<string, array{\Closure(Container): string}>
+     */
+    public static function issuers(): iterable
+    {
+        yield 'connection' => [static fn(Container $c): string => $c->get(ConnectionTokenIssuer::class)->issue(userId: '42', ttl: 60)];
+        yield 'subscription' => [static fn(Container $c): string => $c->get(SubscriptionTokenIssuer::class)->issue(userId: '42', channel: 'c', ttl: 60)];
+    }
+
+    /**
+     * @param \Closure(Container): string $issue
+     */
+    #[DataProvider('issuers')]
+    public function issuerUsesTheContainerClockWhenBound(\Closure $issue): void
+    {
+        $clock = Understudy::for(ClockInterface::class);
+        when(fn() => $clock->now())->returns(new \DateTimeImmutable('@1893456000'));
+
+        $jwt = $issue($this->container(clock: $clock));
+
+        Assert::same($this->expiry($jwt), 1893456060);
+    }
+
+    /**
+     * @param \Closure(Container): string $issue
+     */
+    #[DataProvider('issuers')]
+    public function issuerFallsBackToTheSystemClockWhenNoneIsBound(\Closure $issue): void
+    {
+        $before = time();
+
+        $expiry = $this->expiry($issue($this->container()));
+
+        Assert::true($expiry >= $before + 60 && $expiry <= time() + 60);
+    }
+
+    private function expiry(string $jwt): int
+    {
+        $token = (new Parser(new JoseEncoder()))->parse($jwt);
+        Assert::instanceOf($token, UnencryptedToken::class);
+        $exp = $token->claims()->get('exp');
+        Assert::instanceOf($exp, \DateTimeImmutable::class);
+
+        return $exp->getTimestamp();
+    }
+
+    private function container(?ClientInterface $httpClient = null, ?ClockInterface $clock = null): Container
     {
         $params = [
             'centrifugo' => [
@@ -123,6 +173,7 @@ final class DiContainerTest
                 RequestFactoryInterface::class => $psr17,
                 StreamFactoryInterface::class => $psr17,
                 ResponseFactoryInterface::class => $psr17,
+                ...($clock instanceof \Psr\Clock\ClockInterface ? [ClockInterface::class => $clock] : []),
             ]),
         );
     }

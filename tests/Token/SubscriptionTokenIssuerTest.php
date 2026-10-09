@@ -8,11 +8,15 @@ use Lcobucci\JWT\Configuration;
 use Lcobucci\JWT\Signer\Hmac\Sha256;
 use Lcobucci\JWT\Signer\Key\InMemory;
 use Lcobucci\JWT\UnencryptedToken;
+use Psr\Clock\ClockInterface;
+use Rasuvaeff\Understudy\Understudy;
 use Rasuvaeff\Yii3Centrifugo\Token\SubscriptionTokenIssuer;
 use Testo\Assert;
 use Testo\Codecov\Covers;
 use Testo\Lifecycle\BeforeTest;
 use Testo\Test;
+
+use function Rasuvaeff\Understudy\when;
 
 #[Test]
 #[Covers(SubscriptionTokenIssuer::class)]
@@ -104,6 +108,34 @@ final class SubscriptionTokenIssuerTest
         } catch (\InvalidArgumentException $e) {
             Assert::string($e->getMessage())->contains('channel must not be empty');
         }
+    }
+
+    public function expiryIsTakenFromTheInjectedClock(): void
+    {
+        $issuer = new SubscriptionTokenIssuer(jwtConfig: $this->jwtConfig, defaultTtl: 3600, clock: $this->clockAt('2030-01-01 00:00:00.250000'));
+
+        $explicit = $this->parse($issuer->issue(userId: '1', channel: 'c', ttl: 60));
+        $default = $this->parse($issuer->issue(userId: '1', channel: 'c'));
+
+        Assert::same($explicit->claims()->get('exp')->format('U.u'), '1893456060.000000');
+        Assert::same($default->claims()->get('exp')->format('U.u'), '1893459600.000000');
+    }
+
+    public function systemClockIsUsedWithoutAnInjectedOne(): void
+    {
+        $before = time();
+        $exp = $this->parse($this->issuer->issue(userId: '1', channel: 'c', ttl: 60))->claims()->get('exp');
+
+        Assert::true($exp->getTimestamp() >= $before + 60 && $exp->getTimestamp() <= time() + 60);
+        Assert::same($exp->format('u'), '000000');
+    }
+
+    private function clockAt(string $time): ClockInterface
+    {
+        $clock = Understudy::for(ClockInterface::class);
+        when(fn() => $clock->now())->returns(new \DateTimeImmutable($time, new \DateTimeZone('UTC')));
+
+        return $clock;
     }
 
     private function parse(string $jwt): UnencryptedToken

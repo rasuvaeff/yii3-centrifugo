@@ -6,8 +6,12 @@ namespace Rasuvaeff\Yii3Centrifugo\Token;
 
 use DateTimeImmutable;
 use Lcobucci\JWT\Configuration;
+use Psr\Clock\ClockInterface;
 
 /**
+ * `exp` is whole seconds from the injected PSR-20 clock (the system clock
+ * when none is given).
+ *
  * @api
  */
 final readonly class ConnectionTokenIssuer
@@ -15,6 +19,7 @@ final readonly class ConnectionTokenIssuer
     public function __construct(
         private Configuration $jwtConfig,
         private int $defaultTtl = 3600,
+        private ?ClockInterface $clock = null,
     ) {}
 
     public function issue(
@@ -28,7 +33,8 @@ final readonly class ConnectionTokenIssuer
             throw new \InvalidArgumentException('userId must not be empty');
         }
 
-        $expiresAt = new DateTimeImmutable('+' . ($ttl ?? $this->defaultTtl) . ' seconds');
+        $now = $this->clock?->now() ?? new DateTimeImmutable();
+        $expiresAt = $now->setTimestamp($now->getTimestamp() + ($ttl ?? $this->defaultTtl));
 
         $builder = $this->jwtConfig->builder()
             ->relatedTo($userId)

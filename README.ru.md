@@ -190,6 +190,12 @@ $jwt = $subIssuer->issue(
 );
 ```
 
+`exp` вычисляется в целых секундах по часам PSR-20. Если приложение привязало `Psr\Clock\ClockInterface` в контейнере, DI-определения передают его обоим issuer'ам; иначе используются системные часы. В тестах создайте issuer с фиксированными часами, чтобы проверить точный `exp`:
+
+```php
+$issuer = new ConnectionTokenIssuer(jwtConfig: $jwtConfig, defaultTtl: 3600, clock: $frozenClock);
+```
+
 ### Прокси-события
 
 Centrifugo может проксировать события жизненного цикла соединения на ваш backend
