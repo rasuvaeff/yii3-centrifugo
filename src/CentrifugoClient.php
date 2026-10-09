@@ -23,15 +23,21 @@ final readonly class CentrifugoClient implements CentrifugoClientInterface
     ) {}
 
     #[\Override]
-    public function publish(string $channel, mixed $data): array
+    public function publish(string $channel, mixed $data, ?PublishOptions $options = null): array
     {
-        return $this->send(method: 'publish', payload: ['channel' => $channel, 'data' => $data]);
+        return $this->send(
+            method: 'publish',
+            payload: ['channel' => $channel, 'data' => $data, ...$options?->toPayload() ?? []],
+        );
     }
 
     #[\Override]
-    public function broadcast(array $channels, mixed $data): array
+    public function broadcast(array $channels, mixed $data, ?PublishOptions $options = null): array
     {
-        return $this->send(method: 'broadcast', payload: ['channels' => $channels, 'data' => $data]);
+        return $this->send(
+            method: 'broadcast',
+            payload: ['channels' => $channels, 'data' => $data, ...$options?->toPayload() ?? []],
+        );
     }
 
     #[\Override]

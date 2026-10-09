@@ -17,6 +17,7 @@ use Rasuvaeff\Yii3Centrifugo\CentrifugoApiException;
 use Rasuvaeff\Yii3Centrifugo\CentrifugoClient;
 use Rasuvaeff\Yii3Centrifugo\CentrifugoException;
 use Rasuvaeff\Yii3Centrifugo\CentrifugoTransportException;
+use Rasuvaeff\Yii3Centrifugo\PublishOptions;
 use Testo\Assert;
 use Testo\Codecov\Covers;
 use Testo\Data\DataProvider;
@@ -53,6 +54,50 @@ final class CentrifugoClientTest
         Assert::same($this->requests->last()->getUri()->getPath(), '/api/publish');
         Assert::same($body['channel'], 'news');
         Assert::same($body['data'], ['title' => 'Hello']);
+    }
+
+    public function publishWithoutOptionsSendsOnlyChannelAndData(): void
+    {
+        $client = $this->makeClient(['result' => []]);
+        $client->publish(channel: 'news', data: ['x' => 1]);
+
+        Assert::same((string) $this->requests->last()->getBody(), '{"channel":"news","data":{"x":1}}');
+    }
+
+    public function publishSendsOptions(): void
+    {
+        $client = $this->makeClient(['result' => ['offset' => 3, 'epoch' => 'e']]);
+
+        $result = $client->publish(
+            channel: 'news',
+            data: 1,
+            options: new PublishOptions(idempotencyKey: 'k1', skipHistory: true, tags: ['t' => 'v'], delta: true),
+        );
+
+        Assert::same(
+            (string) $this->requests->last()->getBody(),
+            '{"channel":"news","data":1,"idempotency_key":"k1","skip_history":true,"tags":{"t":"v"},"delta":true}',
+        );
+        Assert::same($result, ['offset' => 3, 'epoch' => 'e']);
+    }
+
+    public function broadcastSendsOptions(): void
+    {
+        $client = $this->makeClient(['result' => ['responses' => []]]);
+        $client->broadcast(channels: ['a', 'b'], data: 1, options: new PublishOptions(idempotencyKey: 'k2'));
+
+        Assert::same(
+            (string) $this->requests->last()->getBody(),
+            '{"channels":["a","b"],"data":1,"idempotency_key":"k2"}',
+        );
+    }
+
+    public function broadcastWithoutOptionsSendsOnlyChannelsAndData(): void
+    {
+        $client = $this->makeClient(['result' => []]);
+        $client->broadcast(channels: ['a'], data: 1);
+
+        Assert::same((string) $this->requests->last()->getBody(), '{"channels":["a"],"data":1}');
     }
 
     public function broadcastSendsCorrectRequest(): void

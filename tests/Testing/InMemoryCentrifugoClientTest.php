@@ -7,6 +7,7 @@ namespace Rasuvaeff\Yii3Centrifugo\Tests\Testing;
 use Rasuvaeff\Yii3Centrifugo\BatchCommand;
 use Rasuvaeff\Yii3Centrifugo\CentrifugoClientInterface;
 use Rasuvaeff\Yii3Centrifugo\CentrifugoTransportException;
+use Rasuvaeff\Yii3Centrifugo\PublishOptions;
 use Rasuvaeff\Yii3Centrifugo\Testing\InMemoryCentrifugoClient;
 use Testo\Assert;
 use Testo\Codecov\Covers;
@@ -36,6 +37,20 @@ final class InMemoryCentrifugoClientTest
         Assert::same($client->publishedTo('b'), ['x']);
         Assert::same($client->publishedTo('news'), [['id' => 1]]);
         Assert::same($client->publishedTo('missing'), []);
+    }
+
+    public function recordsPublishOptions(): void
+    {
+        $client = new InMemoryCentrifugoClient();
+        $options = new PublishOptions(idempotencyKey: 'k');
+
+        $client->publish(channel: 'a', data: 1, options: $options);
+        $client->broadcast(channels: ['b'], data: 2);
+
+        Assert::same($client->calls(), [
+            ['method' => 'publish', 'params' => ['channel' => 'a', 'data' => 1, 'options' => $options]],
+            ['method' => 'broadcast', 'params' => ['channels' => ['b'], 'data' => 2, 'options' => null]],
+        ]);
     }
 
     public function publishedIgnoresOtherMethods(): void
