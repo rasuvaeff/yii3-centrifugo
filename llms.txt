@@ -162,6 +162,7 @@ return [
     'api_key'           => 'secret',
     'token_hmac_secret' => 'at-least-32-chars',
     'token_ttl'         => 3600,
+    'http_client'       => ClientInterface::class, // container id of a dedicated PSR-18 client (timeouts)
 ],
 // Validated when the using service is built; InvalidConfigException names the key:
 // api_url http(s) URL with host; api_key string (empty OK = api_insecure);

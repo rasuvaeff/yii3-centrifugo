@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 use Psr\Clock\ClockInterface;
 use Psr\Container\ContainerInterface;
-use Psr\Http\Client\ClientInterface;
 use Psr\Http\Message\RequestFactoryInterface;
 use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\StreamFactoryInterface;
@@ -29,11 +28,11 @@ use Rasuvaeff\Yii3Centrifugo\Token\SubscriptionTokenIssuer;
 
 return [
     CentrifugoClient::class => static fn(
-        ClientInterface $httpClient,
+        ContainerInterface $container,
         RequestFactoryInterface $requestFactory,
         StreamFactoryInterface $streamFactory,
     ): CentrifugoClient => new CentrifugoClient(
-        httpClient: $httpClient,
+        httpClient: Params::httpClient($params, $container),
         requestFactory: $requestFactory,
         streamFactory: $streamFactory,
         apiUrl: Params::apiUrl($params),

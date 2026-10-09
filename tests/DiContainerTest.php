@@ -151,6 +151,25 @@ final class DiContainerTest
         return $exp->getTimestamp();
     }
 
+    public function clientUsesTheDedicatedHttpClientNamedInParams(): void
+    {
+        $requests = Arg::captor(RequestInterface::class);
+        $dedicated = Understudy::for(ClientInterface::class);
+        $psr17 = new Psr17Factory();
+        when(fn() => $dedicated->sendRequest($requests->capture()))
+            ->returns($psr17->createResponse()->withBody($psr17->createStream('{"result":{}}')));
+        $global = Understudy::strict(Understudy::for(ClientInterface::class));
+
+        $container = $this->container(
+            httpClient: $global,
+            params: ['centrifugo' => ['api_url' => 'https://centrifugo.test', 'http_client' => 'centrifugo.http']],
+            extra: ['centrifugo.http' => $dedicated],
+        );
+        $container->get(CentrifugoClient::class)->info();
+
+        Assert::count($requests->all(), 1);
+    }
+
     public function clientResolvesWithThePackageDefaultParams(): void
     {
         // The shipped defaults have an empty token secret: an application that
@@ -191,8 +210,15 @@ final class DiContainerTest
     /**
      * @param array<array-key, mixed>|null $params
      */
-    private function container(?ClientInterface $httpClient = null, ?ClockInterface $clock = null, ?array $params = null): Container
-    {
+    /**
+     * @param array<string, mixed> $extra
+     */
+    private function container(
+        ?ClientInterface $httpClient = null,
+        ?ClockInterface $clock = null,
+        ?array $params = null,
+        array $extra = [],
+    ): Container {
         $params ??= [
             'centrifugo' => [
                 'api_url' => 'https://centrifugo.test',
@@ -214,7 +240,8 @@ final class DiContainerTest
                 RequestFactoryInterface::class => $psr17,
                 StreamFactoryInterface::class => $psr17,
                 ResponseFactoryInterface::class => $psr17,
-                ...($clock instanceof \Psr\Clock\ClockInterface ? [ClockInterface::class => $clock] : []),
+                ...($clock instanceof ClockInterface ? [ClockInterface::class => $clock] : []),
+                ...$extra,
             ]),
         );
     }

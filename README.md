@@ -44,8 +44,29 @@ Values are validated when the container builds the service that uses them, and a
 | `api_key` | string; **empty is allowed** for a Centrifugo running with `api_insecure` (do not do this in production) | `CentrifugoClient` |
 | `token_hmac_secret` | at least 32 bytes (HS256 needs a 256-bit key) | token issuers |
 | `token_ttl` | integer > 0 | token issuers |
+| `http_client` | container id of a PSR-18 client; default `Psr\Http\Client\ClientInterface::class` | `CentrifugoClient` |
 
 An application that only publishes does not have to configure the token secret.
+
+#### Dedicated HTTP client (timeouts)
+
+By default the server API client uses the application-wide PSR-18 client. To keep publishing bounded in time independently of other integrations, register a dedicated client and name it in `http_client`:
+
+```php
+// config/common/di/centrifugo.php
+return [
+    'centrifugo.http' => static fn(): \GuzzleHttp\Client => new \GuzzleHttp\Client([
+        'timeout' => 2.0,
+        'connect_timeout' => 0.5,
+    ]),
+];
+
+// config/common/params.php
+'centrifugo' => [
+    // ...
+    'http_client' => 'centrifugo.http',
+],
+```
 
 ## Usage
 
