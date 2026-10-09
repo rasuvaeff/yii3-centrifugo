@@ -228,14 +228,54 @@ $issuer = new ConnectionTokenIssuer(jwtConfig: $jwtConfig, defaultTtl: 3600, clo
 
 ### Proxy Events
 
-Centrifugo can proxy connection lifecycle events to your backend over HTTP. Configure endpoints in `centrifugo.json`:
+Centrifugo can proxy connection lifecycle events to your backend over HTTP. Centrifugo v6 configures them in `config.json` in three places: `client.proxy` (connect, refresh — each with `"enabled": true`), `channel.proxy` (subscribe, publish, sub_refresh — switched on per namespace with `*_proxy_enabled`) and `rpc.proxy` (`proxy_enabled` per namespace). Enable only the events you handle; `http.static_headers` sends the shared secret that `ProxySecretMiddleware` checks (see below):
 
 ```json
 {
+  "client": {
     "proxy": {
-        "connect": {"endpoint": "http://app/centrifugo/connect", "timeout": "3s"},
-        "subscribe": {"endpoint": "http://app/centrifugo/subscribe", "timeout": "3s"}
+      "connect": {
+        "enabled": true,
+        "endpoint": "http://app/centrifugo/connect",
+        "timeout": "3s",
+        "http": {"static_headers": {"X-Centrifugo-Proxy-Secret": "<proxy_secret>"}}
+      },
+      "refresh": {
+        "enabled": true,
+        "endpoint": "http://app/centrifugo/refresh",
+        "http": {"static_headers": {"X-Centrifugo-Proxy-Secret": "<proxy_secret>"}}
+      }
     }
+  },
+  "channel": {
+    "proxy": {
+      "subscribe": {
+        "endpoint": "http://app/centrifugo/subscribe",
+        "timeout": "3s",
+        "http": {"static_headers": {"X-Centrifugo-Proxy-Secret": "<proxy_secret>"}}
+      },
+      "publish": {
+        "endpoint": "http://app/centrifugo/publish",
+        "http": {"static_headers": {"X-Centrifugo-Proxy-Secret": "<proxy_secret>"}}
+      },
+      "sub_refresh": {
+        "endpoint": "http://app/centrifugo/sub_refresh",
+        "http": {"static_headers": {"X-Centrifugo-Proxy-Secret": "<proxy_secret>"}}
+      }
+    },
+    "without_namespace": {
+      "subscribe_proxy_enabled": true,
+      "publish_proxy_enabled": true,
+      "sub_refresh_proxy_enabled": true
+    }
+  },
+  "rpc": {
+    "proxy": {
+      "endpoint": "http://app/centrifugo/rpc",
+      "http": {"static_headers": {"X-Centrifugo-Proxy-Secret": "<proxy_secret>"}}
+    },
+    "without_namespace": {"proxy_enabled": true}
+  }
 }
 ```
 
@@ -272,21 +312,7 @@ Group::create('/centrifugo')
     ),
 ```
 
-On the Centrifugo side send the same value with every proxy you enable (`http.static_headers`), e.g. for connect:
-
-```json
-{
-  "client": {
-    "proxy": {
-      "connect": {
-        "enabled": true,
-        "endpoint": "http://app/centrifugo/connect",
-        "http": {"static_headers": {"X-Centrifugo-Proxy-Secret": "<same secret>"}}
-      }
-    }
-  }
-}
-```
+On the Centrifugo side the same value goes into `http.static_headers` of every proxy you enable — the v6 config above already does it.
 
 The middleware refuses to be built with an empty secret (`InvalidConfigException` from DI), so a forgotten secret cannot leave the endpoints open.
 

@@ -88,7 +88,7 @@
         }
     },
     "scripts": {
-        "bc-check": "roave-backward-compatibility-check",
+        "bc-check": "roave-backward-compatibility-check --install-development-dependencies",
         "bench": "testo --suite=Benchmarks -vv",
         "build": [
             "@composer validate --strict",

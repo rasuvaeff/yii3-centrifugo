@@ -58,7 +58,7 @@ update-deps:
 	$(DOCKER) sh -c 'git config --global --add safe.directory /app; composer update -q; composer normalize'
 
 release-check:
-	$(DOCKER) composer release-check
+	$(DOCKER) sh -c 'git config --global --add safe.directory "*"; composer release-check'
 	$(MAKE) mutation
 
 bc-check:
