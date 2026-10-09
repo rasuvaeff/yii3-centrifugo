@@ -15,9 +15,9 @@ namespace Rasuvaeff\Yii3Centrifugo;
  */
 interface CentrifugoClientInterface
 {
-    public function publish(string $channel, mixed $data): array;
+    public function publish(string $channel, mixed $data, ?PublishOptions $options = null): array;
 
-    public function broadcast(array $channels, mixed $data): array;
+    public function broadcast(array $channels, mixed $data, ?PublishOptions $options = null): array;
 
     public function subscribe(string $user, string $channel): array;
 

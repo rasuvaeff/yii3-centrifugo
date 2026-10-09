@@ -32,6 +32,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added `Testing\InMemoryCentrifugoClient`, an in-memory test double
   (`calls()`, `published()`, `publishedTo()`, `failNextWith()`, `reset()`), and
   `examples/testing.php`.
+- Added `PublishOptions` and an optional `?PublishOptions $options = null`
+  argument to `publish()` and `broadcast()` (client, interface, in-memory
+  double) (#12): `idempotency_key`, `skip_history`, `tags`, `delta`,
+  `version` / `version_epoch`; only non-default fields are sent, so existing
+  calls send the same request body. The return type stays `array`.
 
 ## 1.0.0 — 2026-06-27
 

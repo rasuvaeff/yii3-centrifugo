@@ -25,6 +25,13 @@ $client = $container->get(CentrifugoClientInterface::class); // or CentrifugoCli
 
 $client->publish(channel: 'ch', data: ['x' => 1]);
 $client->broadcast(channels: ['a', 'b'], data: ['x' => 1]);
+$client->publish(channel: 'ch', data: [], options: new PublishOptions(
+    idempotencyKey: 'job-1',   // idempotency_key: retry-safe
+    skipHistory: false,        // skip_history
+    tags: ['k' => 'v'],        // tags: array<string, string>
+    delta: false,              // delta
+    version: null,             // version (6.2+), versionEpoch: version_epoch
+));                            // same options for broadcast(); result stays array
 $client->subscribe(user: '42', channel: 'private#42');
 $client->unsubscribe(user: '42', channel: 'private#42');
 $client->disconnect(user: '42');

@@ -45,6 +45,7 @@ Then configure in `config/params.php`:
 ```php
 use Rasuvaeff\Yii3Centrifugo\CentrifugoClient;
 use Rasuvaeff\Yii3Centrifugo\BatchCommand;
+use Rasuvaeff\Yii3Centrifugo\PublishOptions;
 
 $client = $container->get(CentrifugoClient::class);
 
@@ -53,6 +54,13 @@ $client->publish(channel: 'news', data: ['title' => 'Breaking news']);
 
 // Broadcast to multiple channels
 $client->broadcast(channels: ['news', 'alerts'], data: ['ping' => 1]);
+
+// Retry-safe publish from a queue worker: Centrifugo drops the duplicate
+$client->publish(
+    channel: 'orders',
+    data: ['id' => 42],
+    options: new PublishOptions(idempotencyKey: 'order-42-paid', tags: ['kind' => 'order']),
+);
 
 // Manage subscriptions
 $client->subscribe(user: '42', channel: 'private#42');
@@ -82,8 +90,8 @@ $client->batch(
 
 | Method | Description |
 |---|---|
-| `publish(channel, data)` | Publish to one channel |
-| `broadcast(channels, data)` | Publish to many channels |
+| `publish(channel, data, options?)` | Publish to one channel; returns `offset`, `epoch` |
+| `broadcast(channels, data, options?)` | Publish to many channels; returns `responses` |
 | `subscribe(user, channel)` | Subscribe user server-side |
 | `unsubscribe(user, channel)` | Unsubscribe user server-side |
 | `disconnect(user, client?, whitelist?)` | Disconnect user |
@@ -95,6 +103,16 @@ $client->batch(
 | `channels(pattern?)` | List active channels |
 | `info()` | Cluster node info |
 | `batch(BatchCommand ...)` | Multiple commands in one request |
+
+`PublishOptions` (all optional, only non-defaults are sent):
+
+| Argument | API field | Notes |
+|---|---|---|
+| `idempotencyKey` | `idempotency_key` | Centrifugo drops a retried duplicate (Memory and Redis engines) |
+| `skipHistory` | `skip_history` | Do not save to history |
+| `tags` | `tags` | `array<string, string>`, delivered to subscribers |
+| `delta` | `delta` | Delta compression for this publication |
+| `version`, `versionEpoch` | `version`, `version_epoch` | Centrifugo 6.2+, channels with history: lower versions are ignored |
 
 #### Error handling
 

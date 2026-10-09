@@ -6,6 +6,7 @@ namespace Rasuvaeff\Yii3Centrifugo\Testing;
 
 use Rasuvaeff\Yii3Centrifugo\BatchCommand;
 use Rasuvaeff\Yii3Centrifugo\CentrifugoClientInterface;
+use Rasuvaeff\Yii3Centrifugo\PublishOptions;
 
 /**
  * Test double for `CentrifugoClientInterface`: records every call in memory
@@ -26,7 +27,8 @@ final class InMemoryCentrifugoClient implements CentrifugoClientInterface
 
     /**
      * Every recorded call in order, with the parameters named as in the
-     * Centrifugo API (`publish` → `channel`, `data`).
+     * Centrifugo API (`publish` → `channel`, `data`); `publish` and
+     * `broadcast` also carry the `options` object (`PublishOptions|null`).
      *
      * @return list<array{method: string, params: array<string, mixed>}>
      */
@@ -100,15 +102,15 @@ final class InMemoryCentrifugoClient implements CentrifugoClientInterface
     }
 
     #[\Override]
-    public function publish(string $channel, mixed $data): array
+    public function publish(string $channel, mixed $data, ?PublishOptions $options = null): array
     {
-        return $this->record(method: 'publish', params: ['channel' => $channel, 'data' => $data]);
+        return $this->record(method: 'publish', params: ['channel' => $channel, 'data' => $data, 'options' => $options]);
     }
 
     #[\Override]
-    public function broadcast(array $channels, mixed $data): array
+    public function broadcast(array $channels, mixed $data, ?PublishOptions $options = null): array
     {
-        return $this->record(method: 'broadcast', params: ['channels' => $channels, 'data' => $data]);
+        return $this->record(method: 'broadcast', params: ['channels' => $channels, 'data' => $data, 'options' => $options]);
     }
 
     #[\Override]

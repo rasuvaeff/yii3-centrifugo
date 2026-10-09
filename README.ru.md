@@ -49,6 +49,7 @@ composer require rasuvaeff/yii3-centrifugo
 ```php
 use Rasuvaeff\Yii3Centrifugo\CentrifugoClient;
 use Rasuvaeff\Yii3Centrifugo\BatchCommand;
+use Rasuvaeff\Yii3Centrifugo\PublishOptions;
 
 $client = $container->get(CentrifugoClient::class);
 
@@ -57,6 +58,13 @@ $client->publish(channel: 'news', data: ['title' => 'Breaking news']);
 
 // Публикация в несколько каналов
 $client->broadcast(channels: ['news', 'alerts'], data: ['ping' => 1]);
+
+// Повторяемая публикация из воркера очереди: дубль Centrifugo отбросит
+$client->publish(
+    channel: 'orders',
+    data: ['id' => 42],
+    options: new PublishOptions(idempotencyKey: 'order-42-paid', tags: ['kind' => 'order']),
+);
 
 // Управление подписками
 $client->subscribe(user: '42', channel: 'private#42');
@@ -86,8 +94,8 @@ $client->batch(
 
 | Метод | Описание |
 |---|---|
-| `publish(channel, data)` | Публикация в один канал |
-| `broadcast(channels, data)` | Публикация в несколько каналов |
+| `publish(channel, data, options?)` | Публикация в один канал; возвращает `offset`, `epoch` |
+| `broadcast(channels, data, options?)` | Публикация в несколько каналов; возвращает `responses` |
 | `subscribe(user, channel)` | Серверная подписка пользователя |
 | `unsubscribe(user, channel)` | Серверная отписка пользователя |
 | `disconnect(user, client?, whitelist?)` | Отключение пользователя |
@@ -99,6 +107,16 @@ $client->batch(
 | `channels(pattern?)` | Список активных каналов |
 | `info()` | Информация об узле кластера |
 | `batch(BatchCommand ...)` | Несколько команд в одном запросе |
+
+`PublishOptions` (всё необязательно, отправляются только значения не по умолчанию):
+
+| Аргумент | Поле API | Примечание |
+|---|---|---|
+| `idempotencyKey` | `idempotency_key` | Centrifugo отбросит повтор-дубль (движки Memory и Redis) |
+| `skipHistory` | `skip_history` | Не сохранять в историю |
+| `tags` | `tags` | `array<string, string>`, доставляются подписчикам |
+| `delta` | `delta` | Дельта-сжатие для этой публикации |
+| `version`, `versionEpoch` | `version`, `version_epoch` | Centrifugo 6.2+, каналы с историей: меньшие версии игнорируются |
 
 #### Обработка ошибок
 
