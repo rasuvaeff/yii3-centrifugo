@@ -254,6 +254,47 @@ Route::post('/centrifugo/connect', ConnectAction::class),
 Route::post('/centrifugo/subscribe', SubscribeAction::class),
 ```
 
+#### Защита общим секретом
+
+`ProxySecretMiddleware` (PSR-15) пропускает запрос, только если заголовок (по умолчанию `X-Centrifugo-Proxy-Secret`) совпадает с `proxy_secret` из params; сравнение через `hash_equals`. Иначе отвечает **HTTP 403** до запуска action. Сами прокси-action всегда отвечают HTTP 200 с JSON-конвертом; 403 — отказ на транспортном уровне, который Centrifugo считает ошибкой проксирования (клиент получит `100: internal server error`), а не ответом прокси, — поэтому его должен видеть только неавторизованный вызывающий.
+
+```php
+// config/params.php
+'rasuvaeff/yii3-centrifugo' => [
+    // ...
+    'proxy_secret'        => getenv('CENTRIFUGO_PROXY_SECRET'),
+    'proxy_secret_header' => 'X-Centrifugo-Proxy-Secret', // по умолчанию
+],
+
+// маршруты
+use Rasuvaeff\Yii3Centrifugo\Proxy\ProxySecretMiddleware;
+
+Group::create('/centrifugo')
+    ->middleware(ProxySecretMiddleware::class)
+    ->routes(
+        Route::post('/connect')->action(ConnectAction::class),
+        Route::post('/subscribe')->action(SubscribeAction::class),
+    ),
+```
+
+На стороне Centrifugo отправляйте то же значение с каждым включённым прокси (`http.static_headers`), например для connect:
+
+```json
+{
+  "client": {
+    "proxy": {
+      "connect": {
+        "enabled": true,
+        "endpoint": "http://app/centrifugo/connect",
+        "http": {"static_headers": {"X-Centrifugo-Proxy-Secret": "<тот же секрет>"}}
+      }
+    }
+  }
+}
+```
+
+С пустым секретом middleware не собирается (`InvalidConfigException` из DI), так что забытый секрет не оставит эндпоинты открытыми.
+
 Реализуйте интерфейс обработчика в своём приложении:
 
 ```php
@@ -314,7 +355,8 @@ return [
 ## Безопасность
 
 - Прокси-эндпоинты должны быть доступны только с сервера Centrifugo (сетевой ACL
-  или общий секретный заголовок через конфигурацию `proxy.http_headers`).
+  или общий секретный заголовок, который проверяет `ProxySecretMiddleware`, а
+  Centrifugo отправляет через `http.static_headers`).
 - HMAC-секрет и API-ключ приходят из params/env, а не захардкожены.
 - Ошибки серверного API приходят как `CentrifugoException`: `CentrifugoApiException`
   при ответе с `error`, `CentrifugoTransportException` при сетевой ошибке, статусе

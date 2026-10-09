@@ -41,7 +41,7 @@ make release-check
 
 ## Invariants & gotchas
 
-- **Proxy response is always HTTP 200.** Centrifugo reads `{"result":{}}`, `{"error":{"code":N,"message":"..."}}`, or `{"disconnect":{"code":N,"reason":"..."}}` from the body. HTTP 4xx/5xx are treated as hard failures by Centrifugo.
+- **Proxy response is always HTTP 200.** Centrifugo reads `{"result":{}}`, `{"error":{"code":N,"message":"..."}}`, or `{"disconnect":{"code":N,"reason":"..."}}` from the body. HTTP 4xx/5xx are treated as hard failures by Centrifugo. The one deliberate exception is `ProxySecretMiddleware`: its 403 is a refusal *before* the action for a caller without the shared secret, never a proxy reply. Keep it fail-closed (empty secret = constructor exception).
 - **Handler interfaces are NOT bound in `config/di.php`.** The application binds `ConnectProxyHandler::class => AppHandler::class`. Never add handler bindings to the package di.php — `ConfigWiringTest::diKeysDoNotOverlapHandlerInterfaces` enforces this.
 - **ProxyError code: 400–1999. ProxyDisconnect code: 4000–4999.** Validated in constructors.
 - **Params are validated in `src/Internal/Params.php`, per consuming definition.** `config/di.php` only calls it (it is not covered by cs/psalm/testo). The client checks `api_url`/`api_key`, the issuers check `token_hmac_secret` (≥ 32 bytes) and `token_ttl` (> 0) — never validate a key in a definition that does not use it: the shipped defaults have an empty secret, and a publish-only app must still resolve the client. Empty `api_key` is valid (`api_insecure`). Messages name the key, never the value.

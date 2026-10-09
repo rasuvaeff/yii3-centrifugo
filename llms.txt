@@ -98,6 +98,16 @@ SubRefreshAction → POST /centrifugo/sub_refresh
 RpcAction        → POST /centrifugo/rpc
 ```
 
+### ProxySecretMiddleware (PSR-15)
+
+```php
+// params: 'proxy_secret' => '...', 'proxy_secret_header' => 'X-Centrifugo-Proxy-Secret' (default)
+Group::create('/centrifugo')->middleware(ProxySecretMiddleware::class)->routes(...);
+// hash_equals on the header; mismatch/missing → HTTP 403 before the action
+// (Centrifugo treats it as a proxy failure, code 100). Empty secret → exception at build.
+// Centrifugo side: client.proxy.connect.http.static_headers = {"X-Centrifugo-Proxy-Secret": "..."}
+```
+
 ### Proxy Handler Interfaces (implement in app)
 
 ```php

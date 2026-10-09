@@ -249,6 +249,47 @@ Route::post('/centrifugo/connect', ConnectAction::class),
 Route::post('/centrifugo/subscribe', SubscribeAction::class),
 ```
 
+#### Shared-secret protection
+
+`ProxySecretMiddleware` (PSR-15) lets a request through only when the header (default `X-Centrifugo-Proxy-Secret`) equals `proxy_secret` from params, compared with `hash_equals`. Otherwise it answers **HTTP 403** before the action runs. Proxy actions themselves always answer HTTP 200 with a JSON envelope; the 403 is a refusal at the transport level, which Centrifugo treats as a proxy failure (the client gets `100: internal server error`), not as a proxy reply — so only an unauthorized caller should ever see it.
+
+```php
+// config/params.php
+'rasuvaeff/yii3-centrifugo' => [
+    // ...
+    'proxy_secret'        => getenv('CENTRIFUGO_PROXY_SECRET'),
+    'proxy_secret_header' => 'X-Centrifugo-Proxy-Secret', // default
+],
+
+// routes
+use Rasuvaeff\Yii3Centrifugo\Proxy\ProxySecretMiddleware;
+
+Group::create('/centrifugo')
+    ->middleware(ProxySecretMiddleware::class)
+    ->routes(
+        Route::post('/connect')->action(ConnectAction::class),
+        Route::post('/subscribe')->action(SubscribeAction::class),
+    ),
+```
+
+On the Centrifugo side send the same value with every proxy you enable (`http.static_headers`), e.g. for connect:
+
+```json
+{
+  "client": {
+    "proxy": {
+      "connect": {
+        "enabled": true,
+        "endpoint": "http://app/centrifugo/connect",
+        "http": {"static_headers": {"X-Centrifugo-Proxy-Secret": "<same secret>"}}
+      }
+    }
+  }
+}
+```
+
+The middleware refuses to be built with an empty secret (`InvalidConfigException` from DI), so a forgotten secret cannot leave the endpoints open.
+
 Implement the handler interface in your application:
 
 ```php
@@ -308,7 +349,7 @@ return [
 
 ## Security
 
-- Proxy endpoints must be reachable only from the Centrifugo server (network ACL or shared secret header via `proxy.http_headers` config).
+- Proxy endpoints must be reachable only from the Centrifugo server (network ACL, or the shared-secret header checked by `ProxySecretMiddleware` and sent by Centrifugo via `http.static_headers`).
 - HMAC secret and API key are injected from params/env, never hard-coded.
 - Server API failures surface as `CentrifugoException`: `CentrifugoApiException` for an `error` reply, `CentrifugoTransportException` for network errors, non-2xx statuses and non-JSON bodies. Exception messages never contain the API key.
 - `ProxyError` and `ProxyDisconnect` validate code ranges in constructors — invalid codes throw `InvalidArgumentException`.

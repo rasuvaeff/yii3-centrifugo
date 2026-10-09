@@ -20,6 +20,7 @@ use Rasuvaeff\Yii3Centrifugo\CentrifugoClient;
 use Rasuvaeff\Yii3Centrifugo\CentrifugoClientInterface;
 use Rasuvaeff\Yii3Centrifugo\InvalidConfigException;
 use Rasuvaeff\Yii3Centrifugo\Proxy\Internal\ProxyResponseFactory;
+use Rasuvaeff\Yii3Centrifugo\Proxy\ProxySecretMiddleware;
 use Rasuvaeff\Yii3Centrifugo\Token\ConnectionTokenIssuer;
 use Rasuvaeff\Yii3Centrifugo\Token\SubscriptionTokenIssuer;
 use Testo\Assert;
@@ -199,6 +200,34 @@ final class DiContainerTest
         // token_ttl is not in the legacy section: the package default applies
         $before = time();
         Assert::true($this->expiry($jwt) >= $before + 3600 - 1 && $this->expiry($jwt) <= time() + 3600);
+    }
+
+    public function proxySecretMiddlewareIsBuiltFromParams(): void
+    {
+        $params = require __DIR__ . '/../config/params.php';
+        $params['rasuvaeff/yii3-centrifugo']['proxy_secret'] = 'from-params';
+
+        $middleware = $this->container(params: $params)->get(ProxySecretMiddleware::class);
+        $handler = Understudy::strict(Understudy::for(\Psr\Http\Server\RequestHandlerInterface::class));
+        $response = $middleware->process(
+            (new Psr17Factory())->createServerRequest('POST', '/')->withHeader('X-Centrifugo-Proxy-Secret', 'wrong'),
+            $handler,
+        );
+
+        Assert::same($response->getStatusCode(), 403);
+    }
+
+    public function proxySecretMiddlewareRefusesTheEmptyDefaultSecret(): void
+    {
+        $params = require __DIR__ . '/../config/params.php';
+
+        try {
+            $this->container(params: $params)->get(ProxySecretMiddleware::class);
+            Assert::fail('Expected InvalidConfigException');
+        } catch (\Throwable $e) {
+            $config = $e instanceof InvalidConfigException ? $e : $e->getPrevious();
+            Assert::instanceOf($config, InvalidConfigException::class);
+        }
     }
 
     public function clientResolvesWithThePackageDefaultParams(): void

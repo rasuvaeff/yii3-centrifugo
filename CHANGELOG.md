@@ -61,6 +61,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   application that overrides only the old key keeps its settings while the
   package defaults under the new key fill the rest. Validation messages name
   the key the value came from.
+- Added `Proxy\ProxySecretMiddleware` (#15), a PSR-15 middleware for the
+  proxy endpoints: compares a header (default `X-Centrifugo-Proxy-Secret`)
+  with the shared secret using `hash_equals` and answers HTTP 403 before the
+  action otherwise. Fail-closed: an empty secret is refused at construction.
+  New params `proxy_secret` and `proxy_secret_header`; DI definition included.
+  `psr/http-server-middleware` is now required.
 
 ## 1.0.0 — 2026-06-27
 

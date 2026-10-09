@@ -15,5 +15,9 @@ return [
         // container id of the PSR-18 client for the server API; point it at a
         // dedicated client to bound publish time independently of the app's
         'http_client' => ClientInterface::class,
+        // shared secret Centrifugo sends with proxy requests (http.static_headers);
+        // ProxySecretMiddleware refuses to build while it is empty
+        'proxy_secret' => '',
+        'proxy_secret_header' => 'X-Centrifugo-Proxy-Secret',
     ],
 ];
