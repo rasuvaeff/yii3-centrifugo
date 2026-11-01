@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+- Mutation testing now counts code the tests execute without naming it in `#[Covers]`
+  (`infection --with-uncovered`), with `PublicVisibility` off and signature defaults ignored
+  as in the monorepo template; overall MSI 93%. No `src/` or test changes.
 - `examples/publish.php`: runnable publish with `PublishOptions`
   (`idempotencyKey`, `tags`) and `CentrifugoException` handling; the examples
   README referenced it but the script was missing.
