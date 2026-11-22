@@ -14,7 +14,7 @@ Centrifugo v6 integration for Yii3: full HTTP server API client, JWT connection/
 
 ## Requirements
 
-- PHP 8.3–8.5
+- PHP 8.3–8.6
 - Centrifugo v6
 - A PSR-18 HTTP client (e.g. `guzzlehttp/guzzle`, `symfony/http-client`)
 - A PSR-17 factory (e.g. `nyholm/psr7`, `guzzlehttp/psr7`)

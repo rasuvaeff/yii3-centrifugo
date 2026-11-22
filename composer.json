@@ -21,7 +21,7 @@
         "source": "https://github.com/rasuvaeff/yii3-centrifugo"
     },
     "require": {
-        "php": "8.3 - 8.5",
+        "php": "8.3 - 8.6",
         "lcobucci/jwt": "^5.0",
         "psr/clock": "^1.0",
         "psr/container": "^1.1 || ^2.0",

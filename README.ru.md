@@ -17,7 +17,7 @@ refresh, sub_refresh, rpc).
 
 ## Требования
 
-- PHP 8.3–8.5
+- PHP 8.3–8.6
 - Centrifugo v6
 - PSR-18 HTTP-клиент (например, `guzzlehttp/guzzle`, `symfony/http-client`)
 - PSR-17 фабрика (например, `nyholm/psr7`, `guzzlehttp/psr7`)
